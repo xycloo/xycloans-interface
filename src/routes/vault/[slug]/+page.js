@@ -44,10 +44,17 @@ async function get_current_yield(server, contractId, tokenId) {
 	    )
 	)
     )]));
+
+
+
     
     let yield_resp = await server.getContractData(tokenId, vault_current_yield_key);
     let yield_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(yield_resp.xdr, 'base64');
-    return yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo.toString()
+    let stroops = yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo.toString();
+
+    let amount = stroops.slice(0, stroops.length - 6) + "," + stroops.slice(stroops.length - 6);
+    
+    return amount
 }
 
 export async function load({ params }) {
@@ -58,6 +65,27 @@ export async function load({ params }) {
     let totsupp_resp = await get_tot_supply(server, contractId);
     let current_yield = await get_current_yield(server, contractId, token_id_resp);
 
+/*
+    let test_pk = "GA4CK2DWNOSSKQMXUBKUTTFUQR7G64SGT4ZGY2WMNBITLWAP7G35FLQC"
+    const buf = StrKey.decodeEd25519PublicKey(test_pk)
+    
+    const mypk_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Balance"), xdr.ScVal.scvObject(
+	xdr.ScObject.scoAddress(
+	    xdr.ScAddress.scAddressTypeAccount(
+		xdr.PublicKey.publicKeyTypeEd25519(buf)
+	    )
+	)
+    )]));
+
+    console.log(token_id_resp);
+    console.log(mypk_key);
+    let pk_resp = server.getContractData(token_id_resp, mypk_key).then(resp => {
+	console.log(resp)
+    });
+
+  */  
+//    let pk_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(pk_resp.xdr, 'base64');
+    
     return {
 	title: contractId,
 	token_id: token_id_resp,

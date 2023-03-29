@@ -21,12 +21,14 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@creit-tech/xbull-wallet-connect": "github:Creit-Tech/xBull-Wallet-Connect",
 		"@esbuild-plugins/node-globals-polyfill": "^0.2.3",
 		"buffer": "^6.0.3",
 		"events": "^3.3.0",
 		"node-modules-polyfill": "^0.1.4",
 		"process": "^0.11.10",
 		"soroban-client": "^0.4.0",
+		"stellar-wallets-kit": "github:Creit-Tech/Stellar-Wallets-Kit",
 		"tslib": "^2.5.0",
 		"util": "^0.12.5"
 	}
