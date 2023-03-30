@@ -36,7 +36,21 @@ async function get_tot_supply(server, contractId) {
     return resp
 }
 
-async function get_current_yield(server, contractId, tokenId) {
+async function get_flash_loan(server, tok_id) {
+    const contractId = "7fd59b4aa2c634157a08727406e37dc8b4a4b68c4ea4e747ea4bf17073f18f6e";
+
+    const token_id_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("FlashLoan"), xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(tok_id, 'hex')))]));
+
+    let data = await server.getContractData(contractId, token_id_key);
+
+    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
+    let val = from_xdr.value()._attributes.val.value().value().toString("hex");
+
+    return val
+
+}
+
+async function get_bal(server, contractId, tokenId) {
     const vault_current_yield_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Balance"), xdr.ScVal.scvObject(
 	xdr.ScObject.scoAddress(
 	    xdr.ScAddress.scAddressTypeContract(
@@ -45,15 +59,16 @@ async function get_current_yield(server, contractId, tokenId) {
 	)
     )]));
 
-
-
     
     let yield_resp = await server.getContractData(tokenId, vault_current_yield_key);
     let yield_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(yield_resp.xdr, 'base64');
     let stroops = yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo.toString();
 
-    let amount = stroops.slice(0, stroops.length - 6) + "," + stroops.slice(stroops.length - 6);
+    console.log(yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes);
+    console.log(yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo)
     
+    let amount = stroops.slice(0, stroops.length - 7) + "," + stroops.slice(stroops.length - 7);
+
     return amount
 }
 
@@ -63,8 +78,9 @@ export async function load({ params }) {
 
     let token_id_resp = await get_token_id(server, contractId);
     let totsupp_resp = await get_tot_supply(server, contractId);
-    let current_yield = await get_current_yield(server, contractId, token_id_resp);
-
+    let current_yield = await get_bal(server, contractId, token_id_resp);
+    let flash_loan = await get_flash_loan(server, token_id_resp);
+    let total_liquidity = await get_bal(server, flash_loan, token_id_resp);
 /*
     let test_pk = "GA4CK2DWNOSSKQMXUBKUTTFUQR7G64SGT4ZGY2WMNBITLWAP7G35FLQC"
     const buf = StrKey.decodeEd25519PublicKey(test_pk)
@@ -91,7 +107,9 @@ export async function load({ params }) {
 	token_id: token_id_resp,
 	shares_total_supply: totsupp_resp,
 	current_yield: current_yield,
-	asset: TOKENS_MAP[token_id_resp]
+	asset: TOKENS_MAP[token_id_resp],
+	flash_loan: flash_loan,
+	total_liquidity: total_liquidity,
     }
     
     throw error(404, 'Not found');
