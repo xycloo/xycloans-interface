@@ -67,7 +67,7 @@ async function get_bal(server, contractId, tokenId) {
     console.log(yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes);
     console.log(yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo)
     
-    let amount = stroops.slice(0, stroops.length - 7) + "," + stroops.slice(stroops.length - 7);
+    let amount = stroops.slice(0, stroops.length - 7) + "." + stroops.slice(stroops.length - 7);
 
     return amount
 }
