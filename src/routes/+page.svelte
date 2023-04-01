@@ -49,7 +49,7 @@ onMount(async () => {
         </td>
 
     <td>
-    <p>TODO</p>
+    <p>${user_vault.matured} ${user_vault.asset}</p>
         </td>
     
 </tr>`;
@@ -85,7 +85,8 @@ async function get_lender(server, vault, asset, lender_public) {
     let obj = {
 	id: vault,
 	asset: asset,
-	deposit: 0
+	deposit: 0,
+	matured: 0
     }
     
     const buf = StrKey.decodeEd25519PublicKey(lender_public);
@@ -97,22 +98,127 @@ async function get_lender(server, vault, asset, lender_public) {
 	)
     ),
 							]))
+
     try {
 	let data = await server.getContractData(vault, key);
 	let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
 	let val = from_xdr.value()._attributes.val.value().value().lo().toString();
 
 	obj.deposit = val.slice(0, val.length - 7) + "." + val.slice(val.length - 7);
+
+	if (obj.deposit != 0) {
+	    const increment_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Increment"), xdr.ScVal.scvObject(
+		xdr.ScObject.scoAddress(
+		    xdr.ScAddress.scAddressTypeAccount(
+			xdr.PublicKey.publicKeyTypeEd25519(buf)
+		    )
+		)
+	    ),
+								]))
+	    let increment_data = await server.getContractData(vault, increment_key);
+	    let increment_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(increment_data.xdr, 'base64');
+	    let increment = parseInt(increment_from_xdr.value()._attributes.val.value().value().lo().toString());
+
+	    let matured = 0;
+
+	    const token_id = await get_token_id(server, vault);
+	    const balance = parseInt(await get_bal(server, vault, token_id)) + parseInt(await get_bal(server, await get_flash_loan(server, token_id), token_id))
+	    const tot_supply = (await get_tot_supply(server, vault, token_id)).toString();
+
+	    for (let i = 0; i < increment; i++) {
+		const batch_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvObject(
+		    xdr.ScObject.scoAddress(
+			xdr.ScAddress.scAddressTypeAccount(
+			    xdr.PublicKey.publicKeyTypeEd25519(buf)
+			)
+		    )
+		), xdr.ScVal.scvObject(xdr.ScObject.scoI128(new xdr.Int128Parts({
+		    lo: xdr.Uint64.fromString(i.toString()),
+		    hi: xdr.Uint64.fromString("0"),
+		})))
+									  ]));
+
+		const batch_obj_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Batch"), batch_key]));
+
+		let batch_obj_data = await server.getContractData(vault, batch_obj_key);
+		let batch_obj_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(batch_obj_data.xdr, 'base64');
+
+		const current_shares = batch_obj_from_xdr.value()._attributes.val._value._value[0]._attributes.val.value().value()._attributes.lo.toString();
+		const deposit = batch_obj_from_xdr.value()._attributes.val._value._value[1]._attributes.val.value().value()._attributes.lo.toString();
+		const initial_shares = batch_obj_from_xdr.value()._attributes.val._value._value[2]._attributes.val.value().value()._attributes.lo.toString();
+
+
+
+		const fees = Math.abs(parseInt(((balance * parseInt(current_shares)) / tot_supply) - (parseInt(deposit) * (parseInt(current_shares) / parseInt(initial_shares)))));
+
+		matured += fees;
+	    }
+
+	    obj.matured = matured / 10000000
+	}
+	
     } catch (e) {
     }
 
     return obj
 }
 
-async function bridge() {
-    
+async function get_tot_supply(server, contractId) {
+    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TotSupply")]))
+
+    let resp = server.getContractData(contractId, key).then(data => {
+	let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
+	let val = from_xdr.value()._attributes.val.value().value().lo().toString();
+
+	return val
+    });
+
+    return resp
+}
+
+async function get_flash_loan(server, tok_id) {
+    const contractId = "7fd59b4aa2c634157a08727406e37dc8b4a4b68c4ea4e747ea4bf17073f18f6e";
+
+    const token_id_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("FlashLoan"), xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(tok_id, 'hex')))]));
+
+    let data = await server.getContractData(contractId, token_id_key);
+
+    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
+    let val = from_xdr.value()._attributes.val.value().value().toString("hex");
+
+    return val
 
 }
+
+
+async function get_token_id(server, contractId) {
+    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TokenId")]))
+    let data = await server.getContractData(contractId, key)
+    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
+
+    return from_xdr.value()._attributes.val.value().value().toString("hex")
+}
+
+async function get_bal(server, contractId, tokenId) {
+    const vault_current_yield_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Balance"), xdr.ScVal.scvObject(
+	xdr.ScObject.scoAddress(
+	    xdr.ScAddress.scAddressTypeContract(
+		Buffer.from(contractId, "hex")
+	    )
+	)
+    )]));
+
+    
+    let yield_resp = await server.getContractData(tokenId, vault_current_yield_key);
+    let yield_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(yield_resp.xdr, 'base64');
+    let stroops = yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo.toString();
+
+//    let amount = stroops.slice(0, stroops.length - 7) + "." + stroops.slice(stroops.length - 7);
+
+    return stroops
+}
+
+
 
 async function user_dashboard() {
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
@@ -159,7 +265,7 @@ async function user_dashboard() {
         </td>
 
     <td>
-    <p>TODO</p>
+    <p>${user_vault.matured} ${user_vault.asset}</p>
         </td>
     
 </tr>`;
@@ -175,7 +281,8 @@ async function user_dashboard() {
 </svelte:head>
 
 <section>
-    <h3 id="user-pk"></h3>
+    <h4 id="user-pk"></h4>
+    <h2>Your pools</h2>
     <button id="connect" on:click={user_dashboard}>connect wallet</button>
 
     <div class="tbl-header">
@@ -206,6 +313,9 @@ async function user_dashboard() {
     display: none
 }
 
+#user-pk {
+    font-size: .8rem;
+}
 
 :global(table){
   width:100%;
@@ -243,7 +353,7 @@ async function user_dashboard() {
 
  
  h2 {
-     text-align: center;
+
  }
 
 :global(.vault-list-item) {
