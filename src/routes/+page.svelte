@@ -14,9 +14,7 @@ onMount(async () => {
 
     let user_vaults = [];
 
-    if (window.localStorage.getItem("xycloans-public") == null) {
-	document.getElementById("connect").classList = [];
-    }  else {
+    if (window.localStorage.getItem("xycloans-public") != null) {
 	const public_key = window.localStorage.getItem("xycloans-public");
 	set_user_public(public_key);
 
@@ -285,7 +283,6 @@ async function user_dashboard() {
 <section>
     <h4 id="user-pk"></h4>
     <h2>Your pools</h2>
-    <button id="connect" on:click={user_dashboard}>connect wallet</button>
 
     <div class="tbl-header">
     <table cellpadding="0" cellspacing="0" border="0">
@@ -311,9 +308,6 @@ async function user_dashboard() {
 
  <style>
 
-#connect {
-    display: none
-}
 
 #user-pk {
     font-size: .8rem;
