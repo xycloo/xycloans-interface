@@ -5,7 +5,105 @@ import {StrKey, xdr} from "soroban-client";
 import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
 import { Buffer } from 'buffer';
 
+import { onMount } from 'svelte';
+
 import {xdr as js_xdr} from 'js-xdr'
+
+function set_user_public(pk) {
+    document.getElementById("user-pk").innerText = pk;
+}
+
+onMount(async () => {
+    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
+
+   
+    if (window.localStorage.getItem("xycloans-public") == null) {
+	document.getElementById("connect").classList = [];
+    }  else {
+	const public_key = window.localStorage.getItem("xycloans-public");
+	set_user_public(public_key);
+    }
+
+    const lender = window.localStorage.getItem("xycloans-public");
+    let initial_deposit = await get_initial_deposit(server, data.title, lender);
+
+    document.getElementById("provided-liquidity").innerText = initial_deposit.toString() + " " + data.asset;
+
+    const increment = await get_increment(server, data.title, lender); 
+
+    for (let i=0; i < increment; i++) {
+	let batch = await get_batch(server, data.title, lender, i);
+	console.log(batch)
+    }
+    
+});
+
+
+async function get_increment(server, vault, lender) {
+    const buf = StrKey.decodeEd25519PublicKey(lender);
+    const increment_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Increment"), xdr.ScVal.scvObject(
+	xdr.ScObject.scoAddress(
+	    xdr.ScAddress.scAddressTypeAccount(
+		xdr.PublicKey.publicKeyTypeEd25519(buf)
+	    )
+	)
+    ),
+								  ]))
+    let increment_data = await server.getContractData(vault, increment_key);
+    let increment_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(increment_data.xdr, 'base64');
+    let increment = parseInt(increment_from_xdr.value()._attributes.val.value().value().lo().toString());
+    return increment
+}
+
+async function get_batch(server, vault, lender, increment) {
+    const buf = StrKey.decodeEd25519PublicKey(lender);
+    const batch_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvObject(
+	xdr.ScObject.scoAddress(
+	    xdr.ScAddress.scAddressTypeAccount(
+		xdr.PublicKey.publicKeyTypeEd25519(buf)
+	    )
+	)
+    ), xdr.ScVal.scvObject(xdr.ScObject.scoI128(new xdr.Int128Parts({
+	lo: xdr.Uint64.fromString(increment.toString()),
+	hi: xdr.Uint64.fromString("0"),
+    })))
+							      ]));
+
+    const batch_obj_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Batch"), batch_key]));
+
+    try {
+	let batch_obj_data = await server.getContractData(vault, batch_obj_key);
+	let batch_obj_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(batch_obj_data.xdr, 'base64');
+
+	const current_shares = batch_obj_from_xdr.value()._attributes.val._value._value[0]._attributes.val.value().value()._attributes.lo.toString();
+	const deposit = batch_obj_from_xdr.value()._attributes.val._value._value[1]._attributes.val.value().value()._attributes.lo.toString();
+	const initial_shares = batch_obj_from_xdr.value()._attributes.val._value._value[2]._attributes.val.value().value()._attributes.lo.toString();
+
+	return {
+	    current_shares: current_shares, deposit: deposit, initial_shares: initial_shares
+	}
+    } catch (e) {
+	return null
+    }
+
+}
+
+async function get_initial_deposit(server, vault, lender) {
+    const buf = StrKey.decodeEd25519PublicKey(lender);
+    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("InitialDep"), xdr.ScVal.scvObject(
+	xdr.ScObject.scoAddress(
+	    xdr.ScAddress.scAddressTypeAccount(
+		xdr.PublicKey.publicKeyTypeEd25519(buf)
+	    )
+	)
+    ),
+							]));
+    let data = await server.getContractData(vault, key);
+    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
+    let val = from_xdr.value()._attributes.val.value().value().lo().toString();
+    
+    return parseInt(val) / 10000000
+}
 
 async function deposit() {
 
@@ -106,7 +204,9 @@ async function deposit() {
 	<meta name="description" content="xycloans lenders webapp" />
 </svelte:head>
 
-<section>
+    <section>
+
+    <button id="connect" on:click={() => {}}>connect wallet</button>
 
     <h3>Vault {data.title}</h3>
     <p>Token: {data.token_id}</p>
@@ -120,8 +220,15 @@ async function deposit() {
 
     <p id="tx-id"></p>
 
+    <h4 id="user-pk"></h4>
+    <h2>Your liquidity</h2>
+    <div id="provided-liquidity"></div>
+    <div id="batches"></div>
+
 </section>
 
 <style>
-
+#connect {
+    display: none
+}
 </style>
