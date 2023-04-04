@@ -11,7 +11,7 @@
 	</main>
 
 	<footer>
-		<p>built by <a href="https://kit.svelte.dev">xyclooLabs</a></p>
+		<p>built by <a href="https://xycloo.com/">xyclooLabs</a></p>
 	</footer>
 </div>
 

@@ -22,27 +22,33 @@
 	el.style.display = 'block';
       });
     }
-    
-    let initial_deposit = await get_initial_deposit(server, data.title, lender);
-    const increment = await get_increment(server, data.title, lender); 
-    let batches = [];
-    for (let i=0; i < increment; i++) {
-      let batch = await get_batch(server, data.title, lender, i);
-      console.log(batch);
-      batches.push(batch)
-    }
-    console.log(parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000));
-    const total_shares = get_total_shares(batches);
-    const percentage = total_shares * 100 / parseInt(data.shares_total_supply);
-    const pool_balance = parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000);
-    let total_matured = 0;
-    for (let batch of batches) {
-      total_matured += compute_matured_batch(batch, data.shares_total_supply, pool_balance);
-    }
 
-    document.getElementById("provided-liquidity").innerText = "Deposited: " + initial_deposit.toString() + " " + data.asset;
-    document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
-    document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
+    try {
+      let initial_deposit = await get_initial_deposit(server, data.title, lender);
+      const increment = await get_increment(server, data.title, lender); 
+      let batches = [];
+      for (let i=0; i < increment; i++) {
+	let batch = await get_batch(server, data.title, lender, i);
+	console.log(batch);
+	batches.push(batch)
+      }
+      console.log(parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000));
+      const total_shares = get_total_shares(batches);
+      const percentage = total_shares * 100 / parseInt(data.shares_total_supply);
+      const pool_balance = parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000);
+      let total_matured = 0;
+      for (let batch of batches) {
+	total_matured += compute_matured_batch(batch, data.shares_total_supply, pool_balance);
+      }
+
+      document.getElementById("provided-liquidity").innerText = "Deposited: " + initial_deposit.toString() + " " + data.asset;
+      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
+      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
+    } catch (e) {
+      document.getElementById("provided-liquidity").innerText = "Not a lender for this pool";
+      document.getElementById("batches-message").style.display = "block";
+      document.getElementById("batches-message").innerText = "Not a lender for this pool";
+    }
   });
 
   function get_total_shares(batches) {
@@ -237,12 +243,12 @@
 	  document.getElementById("card-el-1").style.display = "block"
 	  document.getElementById("card-el-2").style.display = "none"
 	  }}
-	  class="card-button">General</button>
+	  class="card-button" id="card-button-1">General</button>
 	<div class="sep"></div>
 	<button on:click={() => {
 	  document.getElementById("card-el-2").style.display = "block"
 	  document.getElementById("card-el-1").style.display = "none"
-	  }} class="card-button logged-only">Your liquidity</button>
+	  }} class="card-button logged-only" id="card-button-2">Your liquidity</button>
       </div>
       <div class="card-el" id="card-el-1">
 	<p>Token: {data.token_id}</p>
@@ -266,7 +272,8 @@
   <p id="tx-id"></p>
 
   <div class="logged-only" id="batches">
-      <h3>Your fee batches</h3>
+    <h3>Your fee batches</h3>
+    <p id="batches-message"></p>
   </div>
 
 </section>
@@ -281,7 +288,7 @@
   }
 
   .sep {
-    width: 3px;
+    width: 6px;
     background: rgba(0,0,0,0.1);
   }
 
@@ -299,8 +306,8 @@
   }
   
   .single-card {
-    width: 200px;
-    height: 250px;
+    width: 250px;
+    height: 200px;
     background: rgba(0,0,0,0.3);
     border-radius: 10px;
     position: relative;
@@ -314,10 +321,35 @@
 
   .single-card input {
     display: block;
-    width: 100px;
+    width: 50%;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    font-size: 13px;
+    height: 5px;
+    outline: 0;
+    padding: 15px;
+    background-color: #e8eeef;
+    color: #8a97a0;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset;
     margin: auto;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+	
   }
 
+  .single-card button {
+    text-align: center;
+    font-style: normal;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 5px;
+    background: #00ffae;
+    width: 50%;
+    border: none;
+  }
+  
   .card-el {
     position: absolute;
     padding-left: 15px;
@@ -337,14 +369,20 @@
 
   .card-button {
     width: 100%;
-
     border: none;
-    background: rgba(0,0,0,0.4);
-    color: white;
+    background: #00ffae;
     padding: 10px;
+    border-radius: 3px;	
   }
 
   .logged-only {
+    display: none;
+  }
+
+  #card-button-2 {
+  }
+
+  #batches-message {
     display: none;
   }
 </style>
