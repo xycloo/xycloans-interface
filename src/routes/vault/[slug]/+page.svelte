@@ -1,6 +1,7 @@
 <script>
   export let data;
   import {get_contract_bal} from "../../../soroban-helpers";
+  import {get_lender_shares} from "../../../lender_utils";
   import SorobanClient from "soroban-client";
   import {StrKey, xdr} from "soroban-client";
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
@@ -36,7 +37,7 @@
     }
   });
 
-  async function get_lender_shares(server, vault, lender) {
+/*  async function get_lender_shares(server, vault, lender) {
     const buf = StrKey.decodeEd25519PublicKey(lender);
     const key = xdr.ScVal.scvVec(
       [xdr.ScVal.scvSymbol("Balance"), 
@@ -50,7 +51,7 @@
     let val = from_xdr.value()._attributes.val.value().lo().toString();
     
     return parseInt(val)
-  }
+  }*/
 
   async function deposit() {
 

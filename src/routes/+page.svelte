@@ -1,6 +1,7 @@
 <script>
   //	import Counter from './Counter.svelte';
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
+  import {get_lender_shares} from "../lender_utils";
   import { TOKENS, TOKENS_MAP } from "./TOKENS";
   import SorobanClient from "soroban-client";
   import { xdr, StrKey } from "soroban-client";
@@ -61,17 +62,17 @@
   }
 
   async function load_vaults(server) {
-    const contractId = "7fd59b4aa2c634157a08727406e37dc8b4a4b68c4ea4e747ea4bf17073f18f6e";
+    const contractId = "03bc11e8d978c6cd257469de2a447f3a4181c3410e79b610c7528db280bd27d8";
     let vaults = [];
 
     for (let tok_id of TOKENS) {
 
-      const token_id_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Vault"), xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(tok_id, 'hex')))]));
+      const token_id_key = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol("Vault"), xdr.ScVal.scvBytes(Buffer.from(tok_id, 'hex'))]);
 
       let data = await server.getContractData(contractId, token_id_key);
 
       let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-      let val = from_xdr.value()._attributes.val.value().value().toString("hex");
+      let val = from_xdr.value()._attributes.val.value().toString("hex");
       vaults.push([val, TOKENS_MAP[tok_id]]);
     }
 
@@ -87,7 +88,13 @@
       matured: 0
     }
     
-    const buf = StrKey.decodeEd25519PublicKey(lender_public);
+//    const buf = StrKey.decodeEd25519PublicKey(lender_public);
+
+    obj.deposit = await get_lender_shares(server, vault, lender_public) / 10000000;
+    
+    return obj
+    
+    /*
     const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("InitialDep"), xdr.ScVal.scvObject(
       xdr.ScObject.scoAddress(
 	xdr.ScAddress.scAddressTypeAccount(
@@ -159,7 +166,7 @@
       return obj
       
     } catch (e) {
-    }
+    }*/
   }
 
   async function get_tot_supply(server, contractId) {
