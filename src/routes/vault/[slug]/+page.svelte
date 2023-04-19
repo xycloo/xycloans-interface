@@ -24,113 +24,32 @@
     }
 
     try {
-      let initial_deposit = await get_initial_deposit(server, data.title, lender);
-      const increment = await get_increment(server, data.title, lender); 
-      let batches = [];
-      for (let i=0; i < increment; i++) {
-	let batch = await get_batch(server, data.title, lender, i);
-	console.log(batch);
-	batches.push(batch)
-      }
-      console.log(parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000));
-      const total_shares = get_total_shares(batches);
-      const percentage = total_shares * 100 / parseInt(data.shares_total_supply);
-      const pool_balance = parseInt(data.total_liquidity * 10000000) + parseInt(data.current_yield * 10000000);
-      let total_matured = 0;
-      for (let batch of batches) {
-	total_matured += compute_matured_batch(batch, data.shares_total_supply, pool_balance);
-      }
-
-      document.getElementById("provided-liquidity").innerText = "Deposited: " + initial_deposit.toString() + " " + data.asset;
-      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
-      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
+      let initial_deposit = await get_lender_shares(server, data.title, lender);
+      
+      document.getElementById("provided-liquidity").innerText = "Shares balance: " + initial_deposit.toString() + `\nDeposited: ${(initial_deposit / 10000000).toString()} XLM`;
+//      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
+      //      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
     } catch (e) {
       document.getElementById("provided-liquidity").innerText = "Not a lender for this pool";
-      document.getElementById("batches-message").style.display = "block";
-      document.getElementById("batches-message").innerText = "Not a lender for this pool";
+//      document.getElementById("batches-message").style.display = "block";
+//      document.getElementById("batches-message").innerText = "Not a lender for this pool";
     }
   });
 
-  function get_total_shares(batches) {
-    const total_shares = batches.reduce((accumulator, object) => {
-      return accumulator + parseInt(object.current_shares);
-    }, 0);
-
-    return total_shares
-  }
-  
-  function compute_matured_batch(batch, tot_supply, balance) {
-    const current_shares = parseInt(batch.current_shares);
-    const deposit = parseInt(batch.deposit);
-    const initial_shares = parseInt(batch.initial_shares);
+  async function get_lender_shares(server, vault, lender) {
+    const buf = StrKey.decodeEd25519PublicKey(lender);
+    const key = xdr.ScVal.scvVec(
+      [xdr.ScVal.scvSymbol("Balance"), 
+       xdr.ScVal.scvAddress(
+	 xdr.ScAddress.scAddressTypeAccount(
+	   xdr.PublicKey.publicKeyTypeEd25519(buf)
+	 ))]);
     
-    return Math.abs(parseInt(((balance * parseInt(current_shares)) / tot_supply) - (parseInt(deposit) * (parseInt(current_shares) / parseInt(initial_shares)))));
-  }
-
-  async function get_increment(server, vault, lender) {
-    const buf = StrKey.decodeEd25519PublicKey(lender);
-    const increment_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Increment"), xdr.ScVal.scvObject(
-      xdr.ScObject.scoAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      )
-    ),
-								  ]))
-    let increment_data = await server.getContractData(vault, increment_key);
-    let increment_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(increment_data.xdr, 'base64');
-    let increment = parseInt(increment_from_xdr.value()._attributes.val.value().value().lo().toString());
-    return increment
-  }
-
-  async function get_batch(server, vault, lender, increment) {
-    const buf = StrKey.decodeEd25519PublicKey(lender);
-    const batch_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvObject(
-      xdr.ScObject.scoAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      )
-    ), xdr.ScVal.scvObject(xdr.ScObject.scoI128(new xdr.Int128Parts({
-      lo: xdr.Uint64.fromString(increment.toString()),
-      hi: xdr.Uint64.fromString("0"),
-    })))
-							      ]));
-
-    const batch_obj_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Batch"), batch_key]));
-
-    try {
-      let batch_obj_data = await server.getContractData(vault, batch_obj_key);
-      let batch_obj_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(batch_obj_data.xdr, 'base64');
-
-      const current_shares = batch_obj_from_xdr.value()._attributes.val._value._value[0]._attributes.val.value().value()._attributes.lo.toString();
-      const deposit = batch_obj_from_xdr.value()._attributes.val._value._value[1]._attributes.val.value().value()._attributes.lo.toString();
-      const initial_shares = batch_obj_from_xdr.value()._attributes.val._value._value[2]._attributes.val.value().value()._attributes.lo.toString();
-
-      return {
-	current_shares: current_shares, deposit: deposit, initial_shares: initial_shares
-      }
-    } catch (e) {
-      return null
-    }
-
-  }
-
-  async function get_initial_deposit(server, vault, lender) {
-    const buf = StrKey.decodeEd25519PublicKey(lender);
-    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("InitialDep"), xdr.ScVal.scvObject(
-      xdr.ScObject.scoAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      )
-    ),
-							]));
     let data = await server.getContractData(vault, key);
     let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-    let val = from_xdr.value()._attributes.val.value().value().lo().toString();
+    let val = from_xdr.value()._attributes.val.value().lo().toString();
     
-    return parseInt(val) / 10000000
+    return parseInt(val)
   }
 
   async function deposit() {
@@ -155,24 +74,22 @@
     let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
 
     
-    const contract = new SorobanClient.Contract("7fd59b4aa2c634157a08727406e37dc8b4a4b68c4ea4e747ea4bf17073f18f6e");
+    const contract = new SorobanClient.Contract("03bc11e8d978c6cd257469de2a447f3a4181c3410e79b610c7528db280bd27d8");
     const fee = 100;
 
     //    const buf = StrKey.decodeEd25519PublicKey(public)
 
     const buf = StrKey.decodeEd25519PublicKey(public_key);
     let params = [
-      xdr.ScVal.scvObject(
-	xdr.ScObject.scoAddress(
-	  xdr.ScAddress.scAddressTypeAccount(
-	    xdr.PublicKey.publicKeyTypeEd25519(buf)
-	  )
+      xdr.ScVal.scvAddress(
+	xdr.ScAddress.scAddressTypeAccount(
+	  xdr.PublicKey.publicKeyTypeEd25519(buf)
 	)
       ),
-      xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(data.token_id, 'hex'))),
-      xdr.ScVal.scvObject(xdr.ScObject.scoI128(
+      xdr.ScVal.scvBytes(Buffer.from(data.token_id, 'hex')),
+      xdr.ScVal.scvI128(
 	amount
-      ))
+      )
     ];
     
     let transaction = new SorobanClient.TransactionBuilder(account, {
@@ -184,10 +101,11 @@
 	.build();
 
     const sim = await server.simulateTransaction(transaction);
+
+    console.log(sim);
     
     let auth = sim.results[0].auth;
     let footprint = sim.results[0].footprint;
-
     
     let s_transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
@@ -270,12 +188,7 @@
     </div>
   </div>
   <p id="tx-id"></p>
-
-  <div class="logged-only" id="batches">
-    <h3>Your fee batches</h3>
-    <p id="batches-message"></p>
-  </div>
-
+  
 </section>
 
 <style>
