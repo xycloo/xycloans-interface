@@ -1,7 +1,7 @@
 <script>
   //	import Counter from './Counter.svelte';
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
-  import {get_lender_shares} from "../lender_utils";
+  import {get_lender_shares, update_rewards, get_lender_rewards} from "../lender_utils";
   import { TOKENS, TOKENS_MAP } from "./TOKENS";
   import SorobanClient from "soroban-client";
   import { xdr, StrKey } from "soroban-client";
@@ -17,7 +17,7 @@
 
     if (window.localStorage.getItem("xycloans-public") != null) {
       const public_key = window.localStorage.getItem("xycloans-public");
-      set_user_public(public_key);
+//      set_user_public(public_key);
 
       
       let vaults = await load_vaults(server);
@@ -28,7 +28,33 @@
 	  user_vaults.push(lender_obj);
 	}
       }
+
+      if (user_vaults.length > 0) {
+      document.getElementById("pools").innerHTML = `
+    <div class="tbl-header">
+      <table cellpadding="0" cellspacing="0" border="0">
+	<thead>
+          <tr>
+            <th>Id</th>
+	    <th>Asset</th>
+	    <th>Deposited</th>
+	    <th>Matured</th>
+	    <th></th>
+          </tr>
+	</thead>
+      </table>
+    </div>
+
+    <div class="tbl-content">
       
+      <table id="user-vaults" cellpadding="0" cellspacing="0" border="0">
+      </table>
+    </div>
+  </div>
+`
+      } else {
+	document.getElementById("pools").innerHTML = `Nothing supplied yet`
+      }
 
       for (let user_vault of user_vaults) {
 	let table = document.getElementById("user-vaults");
@@ -36,7 +62,7 @@
 	el.innerHTML = `<tr>
     <td>
     <a href="/vault/${user_vault.id}">
-    <p>${user_vault.id}</p>
+    ${user_vault.id}
     </a>
     </td>
     <td>
@@ -50,9 +76,15 @@
     <td>
     <p>${user_vault.matured} ${user_vault.asset}</p>
         </td>
+
+    <td>
+<button id="update-rewards-${user_vault}">update rewards</button>
+        </td>
+
     
 </tr>`;
 	table.appendChild(el);
+	document.getElementById(`update-rewards-${user_vault}`).addEventListener("click", () => {update_rewards(user_vault.id)});
       }
     }
   });
@@ -62,7 +94,7 @@
   }
 
   async function load_vaults(server) {
-    const contractId = "03bc11e8d978c6cd257469de2a447f3a4181c3410e79b610c7528db280bd27d8";
+    const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
     let vaults = [];
 
     for (let tok_id of TOKENS) {
@@ -91,6 +123,7 @@
 //    const buf = StrKey.decodeEd25519PublicKey(lender_public);
 
     obj.deposit = await get_lender_shares(server, vault, lender_public) / 10000000;
+    obj.matured = await get_lender_rewards(server, vault, lender_public);
     
     return obj
     
@@ -183,7 +216,7 @@
   }
 
   async function get_flash_loan(server, tok_id) {
-    const contractId = "7fd59b4aa2c634157a08727406e37dc8b4a4b68c4ea4e747ea4bf17073f18f6e";
+    const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
 
     const token_id_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("FlashLoan"), xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(tok_id, 'hex')))]));
 
@@ -226,59 +259,6 @@
 
 
 
-  async function user_dashboard() {
-    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
-
-    let user_vaults = [];
-
-    if (window.localStorage.getItem("xycloans-public") == null) {
-      const bridge = new xBullWalletConnect();
-      const public_key = await bridge.connect();
-      window.localStorage.setItem("xycloans-public", public_key);
-      bridge.closeConnections();
-    } 
-
-
-    const public_key = window.localStorage.getItem("xycloans-public");
-    set_user_public(public_key);
-
-    
-    let vaults = await load_vaults(server);
-
-    for (let vault of vaults) {
-      let lender_obj = await get_lender(server, vault[0], vault[1], public_key);
-      if (lender_obj.deposit.amount != 0) {
-	user_vaults.push(lender_obj);
-      }
-    }
-    
-
-    for (let user_vault of user_vaults) {
-      let table = document.getElementById("user-vaults");
-      const el = document.createElement("tr");
-      el.innerHTML = `<tr>
-    <td>
-    <a href="/vault/${user_vault.id}">
-    <p>${user_vault.id}</p>
-    </a>
-    </td>
-    <td>
-    <p>${user_vault.asset}</p>
-        </td>
-
-    <td>
-    <p>${user_vault.deposit} ${user_vault.asset}</p>
-        </td>
-
-    <td>
-    <p>${user_vault.matured} ${user_vault.asset}</p>
-        </td>
-    
-</tr>`;
-      table.appendChild(el);
-    }
-  }
-
   </script>
 
 <svelte:head>
@@ -287,29 +267,17 @@
 </svelte:head>
 
 <section>
+<!--
   <h4 id="user-pk"></h4>
-  <h2>Your pools</h2>
+-->
 
-  <div class="tbl-header">
-    <table cellpadding="0" cellspacing="0" border="0">
-      <thead>
-        <tr>
-          <th>Id</th>
-	  <th>Asset</th>
-	  <th>Deposited</th>
-	  <th>Matured</th>
-        </tr>
-      </thead>
-    </table>
+  <h2>Your supplies</h2>
+
+  <div id="pools">
   </div>
 
-  <div class="tbl-content">
-    
-    <table id="user-vaults">
-    </table>
-  </div>
   
-
+  <p id="tx-id"></p>
 </section>
 
 <style>
@@ -319,54 +287,17 @@
     font-size: .8rem;
   }
 
-  :global(table){
-    width:100%;
-    table-layout: fixed;
+  #pools {
+    margin-top: 40px;
   }
-  :global(.tbl-header) {
-    background-color: rgba(0,0,0,0.3);
-  }
-  :global(.tbl-content) {
-    overflow-x:auto;
-    margin-top: 0px;
-    border: 3px solid rgba(0,0,0,0.3);
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-  }
-  :global(th) {
-    padding: 20px 15px;
-    text-align: left;
-    font-weight: 500;
-    font-size: 12px;
-    color: #fff;
-    text-transform: uppercase;
-  }
-  :global(td) {
-    word-wrap: break-word;
-    background: #0d1016;
-    padding: 15px;
-    text-align: left;
-    vertical-align:middle;
-    font-weight: 300;
-    font-size: 12px;
-    color: #fff;
-    border-bottom: solid 1px rgba(0,0,0,0.1);
-  }
+  
 
+  
   
   h2 {
 
   }
 
-  :global(.vault-list-item) {
-    text-align: center;
-    padding: 20px;
-    background: #000000;
-    border-radius: 10px;
-    width: 550px;
-    margin: auto;
-    margin-top: 60px;
 
-  }
   
 </style>

@@ -6,7 +6,7 @@ import { TOKENS, TOKENS_MAP } from "../TOKENS";
 
 async function load_vaults() {
   let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
-  const contractId = "03bc11e8d978c6cd257469de2a447f3a4181c3410e79b610c7528db280bd27d8";
+  const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
   let vaults = [];
 
 
@@ -27,7 +27,7 @@ async function load_vaults() {
 
 export async function load({ params }) {
   let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
-  const contractId = "03bc11e8d978c6cd257469de2a447f3a4181c3410e79b610c7528db280bd27d8";
+  const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
   let vaults = await load_vaults();
 
   return {

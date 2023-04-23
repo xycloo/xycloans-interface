@@ -87,7 +87,7 @@
   }
 
   .corner {
-    width: 3em;
+    width: 10.9em;
     height: 3em;
     margin-right: 30px;
   }
@@ -102,7 +102,8 @@
 
   .corner img {
     padding-top: 20px;
-    width: 2.9em;
+
+    width: 10.9em;
     height: 2.9em;
     object-fit: contain;
   }
@@ -136,7 +137,7 @@
     height: 100%;
     align-items: center;
     padding: 0 0.5rem;
-    color: var(--color-text);
+    color: var(--color-text-light);
     font-weight: 700;
     font-size: 0.8rem;
     text-transform: uppercase;
