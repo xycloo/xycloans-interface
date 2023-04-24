@@ -24,11 +24,11 @@
 
       for (let vault of vaults) {
 	let lender_obj = await get_lender(server, vault[0], vault[1], public_key);
-	if (lender_obj.deposit.amount != 0) {
+	if (lender_obj.deposit != 0) {
 	  user_vaults.push(lender_obj);
 	}
       }
-
+      
       if (user_vaults.length > 0) {
       document.getElementById("pools").innerHTML = `
     <div class="tbl-header">
@@ -53,7 +53,7 @@
   </div>
 `
       } else {
-	document.getElementById("pools").innerHTML = `Nothing supplied yet`
+	document.getElementById("pools").innerHTML = `<p>Nothing supplied yet</p>`
       }
 
       for (let user_vault of user_vaults) {
@@ -122,8 +122,11 @@
     
 //    const buf = StrKey.decodeEd25519PublicKey(lender_public);
 
-    obj.deposit = await get_lender_shares(server, vault, lender_public) / 10000000;
-    obj.matured = await get_lender_rewards(server, vault, lender_public);
+    try {
+      obj.deposit = await get_lender_shares(server, vault, lender_public) / 10000000;
+      obj.matured = await get_lender_rewards(server, vault, lender_public);
+    } catch (e) {
+    }
     
     return obj
     
