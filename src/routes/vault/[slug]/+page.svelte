@@ -28,9 +28,10 @@
       let initial_deposit = await get_lender_shares(server, data.title, lender);
       let matured = await get_lender_rewards(server, data.title, lender);
       
-      document.getElementById("shares").innerText = "Shares balance: " + initial_deposit.toString();
-      document.getElementById("deposited").innerText = `Deposited: ${(initial_deposit / 10000000).toString()} ${data.asset}`;
-      document.getElementById("matured").innerText = "Matured rewards: " + matured.toString() + ` ${data.asset}`;
+      document.getElementById("shares-withdraw-indicator").innerHTML = "<strong>Your shares</strong>:  " + initial_deposit.toString();
+      document.getElementById("shares").innerHTML = "<strong>Shares balance</strong>: " + initial_deposit.toString();
+      document.getElementById("deposited").innerHTML = `<strong>Deposited</strong>: ${(initial_deposit / 10000000).toString()} ${data.asset}`;
+      document.getElementById("matured").innerHTML = "<strong>Matured rewards</strong>: " + matured.toString() + ` ${data.asset}`;
 
       //      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
       //      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
@@ -148,17 +149,29 @@
 
   }
 
-/*  async function update_rewards() {
-
+  
+  async function withdraw() {
     const bridge = new xBullWalletConnect();
     const public_key = await bridge.connect();
 
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
+
+    
+
+    //    var big = js_xdr.Hyper.fromString('1099511627776');
+    let str_amount = document.getElementById("withdraw-amount").value;
+
+    const amount = new xdr.Int128Parts({
+      lo: xdr.Uint64.fromString(str_amount),
+      hi: xdr.Uint64.fromString("0"),
+    })
+
     let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
 
-    const contract = new SorobanClient.Contract(data.title);
+    
+    const contract = new SorobanClient.Contract("e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423");
     const fee = 100;
 
     //    const buf = StrKey.decodeEd25519PublicKey(public)
@@ -170,13 +183,17 @@
 	  xdr.PublicKey.publicKeyTypeEd25519(buf)
 	)
       ),
+      xdr.ScVal.scvBytes(Buffer.from(data.token_id, 'hex')),
+      xdr.ScVal.scvI128(
+	amount
+      )
     ];
     
     let transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
       networkPassphrase: SorobanClient.Networks.FUTURENET
     })
-	.addOperation(contract.call("update_fee_rewards", ...params))
+	.addOperation(contract.call("withdraw_liquidity", ...params))
 	.setTimeout(10000)
 	.build();
 
@@ -184,6 +201,7 @@
 
     console.log(sim);
     
+    let auth = sim.results[0].auth;
     let footprint = sim.results[0].footprint;
     
     let s_transaction = new SorobanClient.TransactionBuilder(account, {
@@ -193,7 +211,7 @@
 	.addOperation(SorobanClient.Operation.invokeHostFunction({
           function: transaction.operations[0].function,
           footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
-          auth: []
+          auth: [xdr.ContractAuth.fromXDR(auth[0], "base64")]
         }))
 	.setTimeout(10000)
 	.build();
@@ -211,7 +229,7 @@
     
     server.sendTransaction(s_transaction).then(result => {
 
-      document.getElementById("tx-id").innerText = "updating rewards ... tx id is " + result.id;
+      document.getElementById("tx-id").innerText = "withdrawing liquidity position ... tx id is " + result.hash;
       
       console.log("id:", result);
       console.log("error:", result.error);
@@ -220,7 +238,82 @@
     
     bridge.closeConnections();
 
-  }*/
+  }
+
+
+  /*  async function update_rewards() {
+
+      const bridge = new xBullWalletConnect();
+      const public_key = await bridge.connect();
+
+      let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
+
+      let { sequence } = await server.getAccount(public_key);
+      let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
+
+      const contract = new SorobanClient.Contract(data.title);
+      const fee = 100;
+
+      //    const buf = StrKey.decodeEd25519PublicKey(public)
+
+      const buf = StrKey.decodeEd25519PublicKey(public_key);
+      let params = [
+      xdr.ScVal.scvAddress(
+      xdr.ScAddress.scAddressTypeAccount(
+      xdr.PublicKey.publicKeyTypeEd25519(buf)
+      )
+      ),
+      ];
+      
+      let transaction = new SorobanClient.TransactionBuilder(account, {
+      fee,
+      networkPassphrase: SorobanClient.Networks.FUTURENET
+      })
+      .addOperation(contract.call("update_fee_rewards", ...params))
+      .setTimeout(10000)
+      .build();
+
+      const sim = await server.simulateTransaction(transaction);
+
+      console.log(sim);
+      
+      let footprint = sim.results[0].footprint;
+      
+      let s_transaction = new SorobanClient.TransactionBuilder(account, {
+      fee,
+      networkPassphrase: SorobanClient.Networks.FUTURENET
+      })
+      .addOperation(SorobanClient.Operation.invokeHostFunction({
+      function: transaction.operations[0].function,
+      footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
+      auth: []
+      }))
+      .setTimeout(10000)
+      .build();
+
+      const signed_xdr = await bridge.sign({
+      xdr: s_transaction.toXDR(),
+      publicKey: public_key,
+      network: "Test SDF Future Network ; October 2022",
+      });
+      
+      let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
+
+      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+      s_transaction.addSignature(public_key, newsig);
+      
+      server.sendTransaction(s_transaction).then(result => {
+
+      document.getElementById("tx-id").innerText = "updating rewards ... tx id is " + result.id;
+      
+      console.log("id:", result);
+      console.log("error:", result.error);
+      });
+      
+      
+      bridge.closeConnections();
+
+      }*/
 
   async function collect_rewards() {
 
@@ -310,7 +403,7 @@
   
   <div class="flex" id="content">
     <div>
-      <div class="card-buttons">
+      <div class="card-buttons" id="control-btns">
 	<button on:click={() => {
 	  document.getElementById("card-button-1").classList.add("active");
 	  document.getElementById("card-button-2").classList.remove("active");
@@ -332,11 +425,11 @@
       <div class="flex">
 	<div class="card">
 	  <div class="card-el" id="card-el-1">
-	    <p>Token: {data.token_id}</p>
-	    <p>Flash loan: {data.flash_loan}</p>
-	    <p>Minted fee shares: {data.shares_total_supply}</p>
-	    <p>Liquidity: {data.total_liquidity} {data.asset}</p>
-	    <p>Current yield: {data.current_yield} {data.asset}</p>
+	    <p><strong>Token</strong>: {data.token_id}</p>
+	    <p><strong>Flash loan</strong>: {data.flash_loan}</p>
+	    <p><strong>Total supply</strong>: {data.shares_total_supply}</p>
+	    <p><strong>Liquidity</strong>: {data.total_liquidity} {data.asset}</p>
+	    <p><strong>Current yield</strong>: {data.current_yield} {data.asset}</p>
 	  </div>
 	  <div class="card-el" id="card-el-2">
 	    <p id="shares"></p>
@@ -348,9 +441,34 @@
 
 	<div class="block">
 	  <div class="single-card">
-	    <h4>Deposit</h4>
-	    <input id="amount" placeholder="amount">
-	    <button on:click={deposit}>Deposit</button>
+	    <div class="card-buttons-small">
+	      <button on:click={() => {
+		document.getElementById("card-button-3").classList.add("small-active");
+		document.getElementById("card-button-4").classList.remove("small-active");
+		document.getElementById("card-el-3").style.display = "block"
+		document.getElementById("card-el-4").style.display = "none"
+		}}
+		class="card-button small-active small-btn" id="card-button-3">Deposit</button>
+	      <div class="sep"></div>
+	      <button on:click={() => {
+		document.getElementById("card-button-4").classList.add("small-active");
+		document.getElementById("card-button-3").classList.remove("small-active");
+		document.getElementById("card-el-4").style.display = "block"
+		document.getElementById("card-el-3").style.display = "none"
+		}} class="card-button small-btn logged-only" id="card-button-4">Withdraw</button>
+	    </div>
+
+
+	    <div class="card-el" id="card-el-3">
+	      <input id="amount" placeholder="0" type="number">
+	      <button on:click={deposit}>Deposit</button>
+	    </div>
+	    <div class="card-el" id="card-el-4">
+	      <input id="withdraw-amount" placeholder="0" type="number">
+	      <p id="shares-withdraw-indicator"></p>
+	      <button on:click={withdraw}>Withdraw</button>
+	    </div>
+
 	  </div>
 	  <div class="flex">
 	    <button class="action-btn" id="update-rewards" on:click={() => update_rewards(data.title)}>Update rewards</button>
@@ -394,50 +512,54 @@
     width: 10px;
   }
 
+  #control-btns {
+    margin-bottom: 25px;
+  }
+  
   .card {
     width: 700px;
     height: 250px;
-    background: #fff;
+
     border-radius: 10px;
     position: relative;
     margin: auto;
-    margin-top: 25px;
+
     margin-bottom: 50px;
     margin-right: 100px;
     margin-left: 0px;
   }
   
   .single-card {
-    width: 250px;
-    height: 200px;
+    width: 92%;
+    margin-top: 0px;
+    padding: 10px;
     background: #fff;
     border-radius: 10px;
-    text-align: center;
   }
 
-  .single-card h4 {
-    padding-top: 20px;
+  .single-card p {
+    font-size: .8rem;
+    color: #7c7c7c;
   }
 
   .single-card input {
     display: block;
-    width: 50%;
-
+    width: 95%;
     border: none;
-    font-size: 13px;
-    height: 5px;
+    font-size: 20px;
+    height: 50px;
     outline: 0;
-    padding: 15px;
-    background-color: #e8eeef;
-    box-shadow: 0 1px 0 rgba(0,0,0,0.03) inset;
+    background-color: #f7f7f7;
+    color: #7c7c7c;
     margin: auto;
-    margin-top: 40px;
-    margin-bottom: 20px;
+    padding-left: 10px;
+    margin-top: 10px;
+    margin-bottom: 8px;
     border-radius: 5px;
     
   }
 
-  .single-card button {
+  .card-el button {
     text-align: center;
     font-style: normal;
     border-radius: 5px;
@@ -445,9 +567,14 @@
     font-weight: bold;
     padding: 5px;
     background: #00ffae;
-    width: 50%;
+    color: black;
     border: none;
+    background-image: none;
+    box-shadow: 0px 0px 0px #fff inset;
+    width: 100%;
+    height: 40px;
   }
+
 
   .action-btn {
     text-align: center;
@@ -457,11 +584,26 @@
     font-weight: bold;
     padding: 5px;
     height: 40px;
-    background: #00ffae;
+    background: #fff;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 2px 1000px 1px #fff inset;
     width: 50%;
-    border: none;
+    transition: color 0.1s linear;
   }
 
+  .action-btn:hover {
+    color: white;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 0px 0px 0px #fff inset;
+  }
+
+ 
   #update-rewards {
     margin-top: 20px;
     width: 100%;
@@ -480,6 +622,19 @@
     display: none
   }
 
+  #card-el-3 {
+    display: block;
+    position: relative;
+    padding-left: 0px;
+  }
+  
+  #card-el-4 {
+    display: none;
+    position: relative;
+    padding-left: 0px;
+  }
+
+
   .card-buttons {
     display: flex;
     width: 200px;
@@ -488,19 +643,54 @@
     border-radius: 10px;
   }
 
+  .card-buttons-small {
+    display: flex;
+    width: 100%;
+    background: #fff;
+    border-radius: 10px;
+    margin:auto;
+  }
+
+
   .card-buttons button {
     font-weight: 600;
   }
 
+  .card-buttons-small button {
+    font-weight: 600;
+  }
+
+  
   .card-button {
     width: 100%;
     border: none;
     background: #fff;
     color: #000;
-    padding: 10px;
+    padding: 5px;
     border-radius: 3px;	
   }
 
+  .small-btn {
+    font-size: 0.8rem;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 2px 1000px 1px #fff inset;
+  }
+  .small-active {
+    font-size: 0.8rem;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 0px 0px 0px #fff inset;
+    color: white;
+  }
+  
+
+  
+  
   .active {
     background: #00ffae;
     color: #000000;

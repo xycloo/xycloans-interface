@@ -27,9 +27,7 @@ body {
 /*(	background: #181d29;*/
 }
 
-h1,
-h2, h4, p {
-  font-weight: 400;
+h1, h2, h4, p {
   color: var(--color-text-light)
 }
 
@@ -166,4 +164,13 @@ td button {
     background: #00ffae;
     width: 50%;
     border: none;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+input[type="number"] {
+    -moz-appearance: textfield;
 }
