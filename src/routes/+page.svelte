@@ -86,6 +86,8 @@
 	table.appendChild(el);
 	document.getElementById(`update-rewards-${user_vault}`).addEventListener("click", () => {update_rewards(user_vault.id)});
       }
+    } else {
+      document.getElementById("pools").innerHTML = `<p>Connect your wallet first</p>`
     }
   });
 
