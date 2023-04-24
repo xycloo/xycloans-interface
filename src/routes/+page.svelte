@@ -53,7 +53,7 @@
   </div>
 `
       } else {
-	document.getElementById("pools").innerHTML = `<p>Nothing supplied yet</p>`
+	document.getElementById("pools").innerHTML = `<p>Nothing supplied yet, <a href="/explore">explore the existing vaults</a>.</p>`
       }
 
       for (let user_vault of user_vaults) {
