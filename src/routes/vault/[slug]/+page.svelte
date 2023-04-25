@@ -430,6 +430,7 @@
 	    <p><strong>Total supply</strong>: {data.shares_total_supply}</p>
 	    <p><strong>Liquidity</strong>: {data.total_liquidity} {data.asset}</p>
 	    <p><strong>Current yield</strong>: {data.current_yield} {data.asset}</p>
+	   
 	  </div>
 	  <div class="card-el" id="card-el-2">
 	    <p id="shares"></p>
@@ -437,6 +438,7 @@
 	    <p id="matured"></p>
 	    <p id="total-shares"></p>
 	  </div>
+	  
 	</div>
 
 	<div class="block">
@@ -470,13 +472,20 @@
 	    </div>
 
 	  </div>
-	  <div class="flex">
+
+	</div>
+	
+      </div>
+      <div id="rewards-banner">
+
+	<div style="max-width: 64rem; margin: auto">
+	  <div class="flex" style="width: 300px; position: relative; margin-left: 20px">
 	    <button class="action-btn" id="update-rewards" on:click={() => update_rewards(data.title)}>Update rewards</button>
 	    <div style="width: 40px;"></div>
 	    <button class="action-btn" id="update-rewards" on:click={collect_rewards}>Collect rewards</button>
 	  </div>
 	</div>
-      </div>
+      </div> 
     </div>
   </div>
   <p id="tx-id"></p>
@@ -484,6 +493,19 @@
 </section>
 
 <style>
+
+  #rewards-banner {
+    border-radius: 10px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    width: 100vw;
+    background-color: #F1F1F3;
+
+  }
+  
   h2 {
     font-size: 1.8em;
   }
@@ -524,7 +546,7 @@
     position: relative;
     margin: auto;
 
-    margin-bottom: 50px;
+    margin-bottom: 20px;
     margin-right: 100px;
     margin-left: 0px;
   }
@@ -566,15 +588,34 @@
     font-size: 13px;
     font-weight: bold;
     padding: 5px;
-    background: #00ffae;
-    color: black;
-    border: none;
-    background-image: none;
+    font-size: 0.8rem;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
     box-shadow: 0px 0px 0px #fff inset;
+    color: white;
     width: 100%;
     height: 40px;
   }
 
+  .card-el button:hover {
+    text-align: center;
+    font-style: normal;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 5px;
+    font-size: 0.8rem;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 2px 1000px 1px #fff inset;
+    color: black;
+    width: 100%;
+    height: 40px;
+  }
 
   .action-btn {
     text-align: center;

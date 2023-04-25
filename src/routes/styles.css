@@ -133,6 +133,7 @@ button {
     color: var(--color-text-light);
     text-transform: uppercase;
     border: none;
+    font-weight: 800;
 	
   }
   td {
@@ -161,9 +162,10 @@ td button {
     font-size: 13px;
     font-weight: bold;
     padding: 5px;
-    background: #00ffae;
-    width: 50%;
-    border: none;
+    width: 100%;
+	
+/*    background: #00ffae;
+    border: none;*/
 }
 
 input[type="number"]::-webkit-outer-spin-button,

@@ -78,7 +78,7 @@
         </td>
 
     <td>
-<button id="update-rewards-${user_vault}">update rewards</button>
+<button class="action-btn-rev" id="update-rewards-${user_vault}">update rewards</button>
         </td>
 
     
@@ -287,6 +287,36 @@
 
 <style>
 
+  :global(.action-btn-rev) {
+    text-align: center;
+    font-style: normal;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: bold;
+    padding: 5px;
+    height: 40px;
+    background: #fff;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 0px 0px 0px #fff inset;
+    color: white;
+    width: 100%;
+    max-width: 120px;
+    transition: color 0.1s linear;
+  }
+
+  :global(.action-btn-rev:hover) {
+    font-size: 0.8rem;
+    border: solid 3px transparent;
+    background-image: linear-gradient(rgba(255, 255, 255, 0), rgba(255, 255, 255, 0)), linear-gradient(101deg, #78e4ff, #ff48fa);
+    background-origin: border-box;
+    background-clip: content-box, border-box;
+    box-shadow: 2px 1000px 1px #fff inset;
+    color: black;
+  }
+
 
   #user-pk {
     font-size: .8rem;
@@ -302,7 +332,6 @@
   h2 {
 
   }
-
 
   
 </style>
