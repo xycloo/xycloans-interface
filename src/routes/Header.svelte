@@ -24,6 +24,7 @@
 
 </script>
 
+<div id="header-section">
 <header>
   <nav>
     <div class="corner">
@@ -56,12 +57,22 @@
 
 
 </header>
+</div>
 
 <style>
 
+  #header-section {
+    background: #fff;
+    right: 0;
+    left: 0;
+    top: 0;
+    z-index: 99;
+    margin-bottom: 40px;
+  }
+
   header {
     width: 100%;
-    padding-bottom: 50px;
+    padding-bottom: 20px;
   }
 
   nav {
@@ -75,7 +86,7 @@
 
   #wallet button {
     height: 70%;
-    top: 10px;
+    top: 15px;
     position: absolute;
     right: 10px;
   }
@@ -87,7 +98,7 @@
   }
 
   .corner {
-    width: 3em;
+    width: 10.9em;
     height: 3em;
     margin-right: 30px;
   }
@@ -102,7 +113,8 @@
 
   .corner img {
     padding-top: 20px;
-    width: 2.9em;
+
+    width: 10.9em;
     height: 2.9em;
     object-fit: contain;
   }
@@ -136,7 +148,7 @@
     height: 100%;
     align-items: center;
     padding: 0 0.5rem;
-    color: var(--color-text);
+    color: var(--color-text-light);
     font-weight: 700;
     font-size: 0.8rem;
     text-transform: uppercase;
@@ -162,6 +174,6 @@
   }
 
   a:hover {
-    color: var(--color-theme-1);
+    color: var(--color-theme-3);
   }
 </style>

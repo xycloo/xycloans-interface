@@ -10,9 +10,9 @@
 		<slot />
 	</main>
 
-	<footer>
+<!--	<footer>
 		<p>built by <a href="https://xycloo.com/">xyclooLabs</a></p>
-	</footer>
+	</footer>-->
 </div>
 
 <style>

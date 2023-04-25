@@ -31,7 +31,7 @@ import SorobanClient from "soroban-client";
     <tr>
     <td>
     <a href="/vault/{item[0]}">
-    <p>{item[0]}</p>
+    {item[0]}
     </a>
     </td>
     <td>
@@ -48,53 +48,5 @@ import SorobanClient from "soroban-client";
 
  <style>
 
- table{
-  width:100%;
-  table-layout: fixed;
-}
-.tbl-header{
-  background-color: rgba(0,0,0,0.3);
- }
-.tbl-content{
-  overflow-x:auto;
-  margin-top: 0px;
-  border: 3px solid rgba(0,0,0,0.3);
-  border-bottom-left-radius: 10px;
-  border-bottom-right-radius: 10px;
-}
-th{
-  padding: 20px 15px;
-  text-align: left;
-  font-weight: 500;
-  font-size: 12px;
-  color: #fff;
-  text-transform: uppercase;
-}
-td{
-      background: #0d1016;
-  padding: 15px;
-  text-align: left;
-  vertical-align:middle;
-  font-weight: 300;
-  font-size: 12px;
-  color: #fff;
-  border-bottom: solid 1px rgba(0,0,0,0.1);
-}
-
- 
- h2 {
-     text-align: center;
- }
-
- .vault-list-item {
-     text-align: center;
-     padding: 20px;
-     background: #000000;
-     border-radius: 10px;
-     width: 550px;
-     margin: auto;
-     margin-top: 60px;
-
- }
  
 </style>
