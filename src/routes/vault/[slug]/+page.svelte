@@ -2,7 +2,7 @@
   export let data;
   import {get_contract_bal} from "../../../soroban-helpers";
   import {get_lender_shares, get_lender_rewards, update_rewards} from "../../../lender_utils";
-  import SorobanClient from "soroban-client";
+  import * as SorobanClient from "soroban-client";
   import {StrKey, xdr} from "soroban-client";
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
   import { Buffer } from 'buffer';
@@ -11,7 +11,8 @@
 
   import {xdr as js_xdr} from 'js-xdr'
 
-
+  const PROXY = "e6a71d5cc69710aa8b9405752210fac3ca734583efaea28631ae20d6aa14a0d6";
+  
   onMount(async () => {
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
 
@@ -36,7 +37,7 @@
       //      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
       //      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
     } catch (e) {
-      document.getElementById("provided-liquidity").innerText = "Not a lender for this pool";
+      document.getElementById("deposited").innerText = "Not a lender for this pool";
       //      document.getElementById("batches-message").style.display = "block";
       //      document.getElementById("batches-message").innerText = "Not a lender for this pool";
     }
@@ -78,9 +79,8 @@
     })
 
     let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
-
     
-    const contract = new SorobanClient.Contract("e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423");
+    const contract = new SorobanClient.Contract(PROXY);
     const fee = 100;
 
     //    const buf = StrKey.decodeEd25519PublicKey(public)
@@ -92,12 +92,16 @@
 	  xdr.PublicKey.publicKeyTypeEd25519(buf)
 	)
       ),
-      xdr.ScVal.scvBytes(Buffer.from(data.token_id, 'hex')),
+       xdr.ScVal.scvAddress(
+            xdr.ScAddress.scAddressTypeContract(
+              Buffer.from(data.token_id, "hex")
+            )
+          ),
       xdr.ScVal.scvI128(
 	amount
       )
     ];
-    
+
     let transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
       networkPassphrase: SorobanClient.Networks.FUTURENET
@@ -106,9 +110,12 @@
 	.setTimeout(10000)
 	.build();
 
+    
+    console.log(transaction);
+//    const preparedTransaction = await server.prepareTransaction(transaction);
     const sim = await server.simulateTransaction(transaction);
 
-    console.log(sim);
+//    console.log(preparedTransaction);
     
     let auth = sim.results[0].auth;
     let footprint = sim.results[0].footprint;

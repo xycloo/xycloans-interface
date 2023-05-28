@@ -1,7 +1,7 @@
 <script>
   //	import Counter from './Counter.svelte';
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
-  import {get_lender_shares, update_rewards, get_lender_rewards} from "../lender_utils";
+  import {get_user_vaults} from "../soroban-helpers";
   import { TOKENS, TOKENS_MAP } from "./TOKENS";
   import SorobanClient from "soroban-client";
   import { xdr, StrKey } from "soroban-client";
@@ -13,24 +13,12 @@
   onMount(async () => {
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
 
-    let user_vaults = [];
-
     if (window.localStorage.getItem("xycloans-public") != null) {
       const public_key = window.localStorage.getItem("xycloans-public");
-//      set_user_public(public_key);
-
-      
-      let vaults = await load_vaults(server);
-
-      for (let vault of vaults) {
-	let lender_obj = await get_lender(server, vault[0], vault[1], public_key);
-	if (lender_obj.deposit != 0) {
-	  user_vaults.push(lender_obj);
-	}
-      }
+      const user_vaults = await get_user_vaults(server, public_key);
       
       if (user_vaults.length > 0) {
-      document.getElementById("pools").innerHTML = `
+	document.getElementById("pools").innerHTML = `
     <div class="tbl-header">
       <table cellpadding="0" cellspacing="0" border="0">
 	<thead>
@@ -95,117 +83,6 @@
     document.getElementById("user-pk").innerText = pk;
   }
 
-  async function load_vaults(server) {
-    const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
-    let vaults = [];
-
-    for (let tok_id of TOKENS) {
-
-      const token_id_key = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol("Vault"), xdr.ScVal.scvBytes(Buffer.from(tok_id, 'hex'))]);
-
-      let data = await server.getContractData(contractId, token_id_key);
-
-      let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-      let val = from_xdr.value()._attributes.val.value().toString("hex");
-      vaults.push([val, TOKENS_MAP[tok_id]]);
-    }
-
-    return vaults
-  }
-
-  async function get_lender(server, vault, asset, lender_public) {
-
-    let obj = {
-      id: vault,
-      asset: asset,
-      deposit: 0,
-      matured: 0
-    }
-    
-//    const buf = StrKey.decodeEd25519PublicKey(lender_public);
-
-    try {
-      obj.deposit = await get_lender_shares(server, vault, lender_public) / 10000000;
-      obj.matured = await get_lender_rewards(server, vault, lender_public);
-    } catch (e) {
-    }
-    
-    return obj
-    
-    /*
-    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("InitialDep"), xdr.ScVal.scvObject(
-      xdr.ScObject.scoAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      )
-    ),
-							]))
-
-    try {
-      let data = await server.getContractData(vault, key);
-      let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-      let val = from_xdr.value()._attributes.val.value().value().lo().toString();
-
-      obj.deposit = val.slice(0, val.length - 7) + "." + val.slice(val.length - 7);
-
-      if (obj.deposit != 0) {
-	const increment_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Increment"), xdr.ScVal.scvObject(
-	  xdr.ScObject.scoAddress(
-	    xdr.ScAddress.scAddressTypeAccount(
-	      xdr.PublicKey.publicKeyTypeEd25519(buf)
-	    )
-	  )
-	),
-								      ]))
-	let increment_data = await server.getContractData(vault, increment_key);
-	let increment_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(increment_data.xdr, 'base64');
-	let increment = parseInt(increment_from_xdr.value()._attributes.val.value().value().lo().toString());
-
-	let matured = 0;
-
-	const token_id = await get_token_id(server, vault);
-	const balance = parseInt(await get_bal(server, vault, token_id)) + parseInt(await get_bal(server, await get_flash_loan(server, token_id), token_id))
-	const tot_supply = (await get_tot_supply(server, vault, token_id)).toString();
-
-	for (let i = 0; i < increment; i++) {
-	  const batch_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvObject(
-	    xdr.ScObject.scoAddress(
-	      xdr.ScAddress.scAddressTypeAccount(
-		xdr.PublicKey.publicKeyTypeEd25519(buf)
-	      )
-	    )
-	  ), xdr.ScVal.scvObject(xdr.ScObject.scoI128(new xdr.Int128Parts({
-	    lo: xdr.Uint64.fromString(i.toString()),
-	    hi: xdr.Uint64.fromString("0"),
-	  })))
-								    ]));
-
-	  const batch_obj_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Batch"), batch_key]));
-
-	  try {
-	    let batch_obj_data = await server.getContractData(vault, batch_obj_key);
-	    let batch_obj_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(batch_obj_data.xdr, 'base64');
-
-	    const current_shares = batch_obj_from_xdr.value()._attributes.val._value._value[0]._attributes.val.value().value()._attributes.lo.toString();
-	    const deposit = batch_obj_from_xdr.value()._attributes.val._value._value[1]._attributes.val.value().value()._attributes.lo.toString();
-	    const initial_shares = batch_obj_from_xdr.value()._attributes.val._value._value[2]._attributes.val.value().value()._attributes.lo.toString();
-
-
-
-	    const fees = Math.abs(parseInt(((balance * parseInt(current_shares)) / tot_supply) - (parseInt(deposit) * (parseInt(current_shares) / parseInt(initial_shares)))));
-
-	    matured += fees;
-	  } catch (e) {}
-	}
-
-	obj.matured = matured / 10000000
-      }
-      return obj
-      
-    } catch (e) {
-    }*/
-  }
 
   async function get_tot_supply(server, contractId) {
     const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TotSupply")]))
@@ -272,16 +149,16 @@
 </svelte:head>
 
 <section>
-<!--
-  <h4 id="user-pk"></h4>
--->
+  <!--
+      <h4 id="user-pk"></h4>
+      -->
 
-  <h2>Your supplies</h2>
+      <h2>Your supplies</h2>
 
-  <div id="pools">
-  </div>
+      <div id="pools">
+      </div>
 
-  
+      
   <p id="tx-id"></p>
 </section>
 
