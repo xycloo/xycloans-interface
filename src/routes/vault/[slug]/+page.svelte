@@ -9,10 +9,10 @@
 
   import { onMount } from 'svelte';
 
-  import * as js_xdr from 'js-xdr'
+  //import * as js_xdr from 'js-xdr'
+  import {PUBLIC_TEST_SECRET, PUBLIC_PROXY} from '$env/static/public'
 
-  const PROXY = "f4f568f344a139c919faef4243c42c635312a16eb2d434035782ad7eb899cb20";
-  
+
   onMount(async () => {
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
 
@@ -27,6 +27,7 @@
 
     try {
       let initial_deposit = await get_lender_shares(server, data.title, lender);
+      console.log(initial_deposit);
       let matured = await get_lender_rewards(server, data.title, lender);
       
       document.getElementById("shares-withdraw-indicator").innerHTML = "<strong>Your shares</strong>:  " + initial_deposit.toString();
@@ -43,21 +44,6 @@
     }
   });
 
-  /*  async function get_lender_shares(server, vault, lender) {
-      const buf = StrKey.decodeEd25519PublicKey(lender);
-      const key = xdr.ScVal.scvVec(
-      [xdr.ScVal.scvSymbol("Balance"), 
-      xdr.ScVal.scvAddress(
-      xdr.ScAddress.scAddressTypeAccount(
-      xdr.PublicKey.publicKeyTypeEd25519(buf)
-      ))]);
-      
-      let data = await server.getContractData(vault, key);
-      let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-      let val = from_xdr.value()._attributes.val.value().lo().toString();
-      
-      return parseInt(val)
-      }*/
 
   async function deposit() {
 
@@ -67,8 +53,7 @@
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
-
-    
+    sequence = parseInt(sequence) + 1;
 
     //    var big = js_xdr.Hyper.fromString('1099511627776');
     let str_amount = document.getElementById("amount").value;
@@ -80,7 +65,7 @@
 
     let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
     
-    const contract = new SorobanClient.Contract(PROXY);
+    const contract = new SorobanClient.Contract(PUBLIC_PROXY);
     const fee = 100;
 
     //    const buf = StrKey.decodeEd25519PublicKey(public)
@@ -112,56 +97,32 @@
 	.build();
 
     
-//    console.log(transaction);
-    const preparedTransaction = await server.prepareTransaction(transaction);
     const simulation = await server.simulateTransaction(transaction);
-/*    console.log(sim);
-    
-    let auth = sim.results[0].auth;
-    //    let footprint = sim.results[0].footprint;
-    let tx_data = sim.transactionData;
-    
-    let s_transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(SorobanClient.Operation.invokeHostFunction({
-          function: transaction.operations[0].function,
-          footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
-          auth: [xdr.ContractAuth.fromXDR(auth[0], "base64")]
-        }))
-	.setTimeout(10000)
-	.build();*/
-
     const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
 
-    console.log(s_transaction.toXDR());
+/*
 
-/*    const signed_xdr = await bridge.sign({
+TODO: uncomment for when wallets are updated for Preview 9
+
+    const signed_xdr = await bridge.sign({
       xdr: s_transaction.toXDR(),
       publicKey: public_key,
       network: "Test SDF Future Network ; October 2022",
     });
-*/
-    const sourceKeypair = SorobanClient.Keypair.fromSecret("SBJU2TQS4FEM3MUIFHKB3UFGGXHJ337PGP564NL44LE7QM65XEG7ZRRB");
-    const signed_xdr = s_transaction.sign(sourceKeypair);
-    
-//    let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
 
-/*    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-    s_transaction.addSignature(public_key, newsig);
+    console.log(signed_xdr);
+*/
+    
+    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
+    s_transaction.sign(sourceKeypair);
     
     server.sendTransaction(s_transaction).then(result => {
-
       document.getElementById("tx-id").innerText = "depositing ... tx id is " + result.hash;
-      
       console.log("id:", result);
       console.log("error:", result.error);
     });
-    
-    
-    bridge.closeConnections();*/
-
+        
+    bridge.closeConnections();
   }
 
   
@@ -172,24 +133,19 @@
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
+//    sequence = parseInt(sequence);
+    console.log(sequence);
 
-    
-
-    //    var big = js_xdr.Hyper.fromString('1099511627776');
     let str_amount = document.getElementById("withdraw-amount").value;
-
     const amount = new xdr.Int128Parts({
       lo: xdr.Uint64.fromString(str_amount),
-      hi: xdr.Uint64.fromString("0"),
+      hi: xdr.Int64.fromString("0"),
     })
 
-    let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
-
+    let account = new SorobanClient.Account(public_key, sequence.toString());
     
-    const contract = new SorobanClient.Contract("e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423");
+    const contract = new SorobanClient.Contract(PUBLIC_PROXY);
     const fee = 100;
-
-    //    const buf = StrKey.decodeEd25519PublicKey(public)
 
     const buf = StrKey.decodeEd25519PublicKey(public_key);
     let params = [
@@ -198,11 +154,18 @@
 	  xdr.PublicKey.publicKeyTypeEd25519(buf)
 	)
       ),
-      xdr.ScVal.scvBytes(Buffer.from(data.token_id, 'hex')),
+      xdr.ScVal.scvAddress(
+        xdr.ScAddress.scAddressTypeContract(
+          Buffer.from(data.token_id, "hex")
+        )
+      ),
       xdr.ScVal.scvI128(
 	amount
       )
     ];
+
+    console.log(PUBLIC_TEST_SECRET);
+    console.log(public_key);
     
     let transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
@@ -212,24 +175,11 @@
 	.setTimeout(10000)
 	.build();
 
-    const sim = await server.simulateTransaction(transaction);
+    const simulation = await server.simulateTransaction(transaction);
+    const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
 
-    console.log(sim);
-    
-    let auth = sim.results[0].auth;
-    let footprint = sim.results[0].footprint;
-    
-    let s_transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(SorobanClient.Operation.invokeHostFunction({
-          function: transaction.operations[0].function,
-          footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
-          auth: [xdr.ContractAuth.fromXDR(auth[0], "base64")]
-        }))
-	.setTimeout(10000)
-	.build();
+    /*
+      TODO: uncomment when wallets are update to preview 9
 
     const signed_xdr = await bridge.sign({
       xdr: s_transaction.toXDR(),
@@ -239,9 +189,11 @@
     
     let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
 
-    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-    s_transaction.addSignature(public_key, newsig);
-    
+    */
+
+    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
+    s_transaction.sign(sourceKeypair);
+   
     server.sendTransaction(s_transaction).then(result => {
 
       document.getElementById("tx-id").innerText = "withdrawing liquidity position ... tx id is " + result.hash;

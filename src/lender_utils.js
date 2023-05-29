@@ -20,8 +20,8 @@ export async function get_lender_shares(server, vault, lender) {
     
     let data = await server.getContractData(vault, key);
     let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-    let val = from_xdr.value()._attributes.val.value().hi().toString();
-    
+    let val = from_xdr.value()._attributes.val.value().lo().toString();
+  
     return parseInt(val)
   }
 
