@@ -3,7 +3,7 @@
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
   import {get_user_vaults} from "../soroban-helpers";
   import { TOKENS, TOKENS_MAP } from "./TOKENS";
-  import SorobanClient from "soroban-client";
+  import * as SorobanClient from "soroban-client";
   import { xdr, StrKey } from "soroban-client";
   import { Buffer } from 'buffer';
 
@@ -83,7 +83,7 @@
     document.getElementById("user-pk").innerText = pk;
   }
 
-
+/*
   async function get_tot_supply(server, contractId) {
     const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TotSupply")]))
 
@@ -139,7 +139,7 @@
     return stroops
   }
 
-
+*/
 
   </script>
 

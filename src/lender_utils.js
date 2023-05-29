@@ -1,5 +1,5 @@
 import {get_contract_bal} from "./soroban-helpers";
-  import SorobanClient from "soroban-client";
+  import * as SorobanClient from "soroban-client";
   import {StrKey, xdr} from "soroban-client";
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
   import { Buffer } from 'buffer';

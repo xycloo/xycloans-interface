@@ -9,9 +9,9 @@
 
   import { onMount } from 'svelte';
 
-  import {xdr as js_xdr} from 'js-xdr'
+  import * as js_xdr from 'js-xdr'
 
-  const PROXY = "e6a71d5cc69710aa8b9405752210fac3ca734583efaea28631ae20d6aa14a0d6";
+  const PROXY = "f4f568f344a139c919faef4243c42c635312a16eb2d434035782ad7eb899cb20";
   
   onMount(async () => {
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/")
@@ -72,10 +72,10 @@
 
     //    var big = js_xdr.Hyper.fromString('1099511627776');
     let str_amount = document.getElementById("amount").value;
-
+    console.log(xdr);
     const amount = new xdr.Int128Parts({
       lo: xdr.Uint64.fromString(str_amount),
-      hi: xdr.Uint64.fromString("0"),
+      hi: xdr.Int64.fromString("0"),
     })
 
     let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
@@ -104,21 +104,22 @@
 
     let transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
+      networkPassphrase: SorobanClient.Networks.FUTURENET,
+      v1: true
     })
 	.addOperation(contract.call("deposit", ...params))
 	.setTimeout(10000)
 	.build();
 
     
-    console.log(transaction);
-//    const preparedTransaction = await server.prepareTransaction(transaction);
-    const sim = await server.simulateTransaction(transaction);
-
-//    console.log(preparedTransaction);
+//    console.log(transaction);
+    const preparedTransaction = await server.prepareTransaction(transaction);
+    const simulation = await server.simulateTransaction(transaction);
+/*    console.log(sim);
     
     let auth = sim.results[0].auth;
-    let footprint = sim.results[0].footprint;
+    //    let footprint = sim.results[0].footprint;
+    let tx_data = sim.transactionData;
     
     let s_transaction = new SorobanClient.TransactionBuilder(account, {
       fee,
@@ -130,17 +131,24 @@
           auth: [xdr.ContractAuth.fromXDR(auth[0], "base64")]
         }))
 	.setTimeout(10000)
-	.build();
+	.build();*/
 
-    const signed_xdr = await bridge.sign({
+    const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
+
+    console.log(s_transaction.toXDR());
+
+/*    const signed_xdr = await bridge.sign({
       xdr: s_transaction.toXDR(),
       publicKey: public_key,
       network: "Test SDF Future Network ; October 2022",
     });
+*/
+    const sourceKeypair = SorobanClient.Keypair.fromSecret("SBJU2TQS4FEM3MUIFHKB3UFGGXHJ337PGP564NL44LE7QM65XEG7ZRRB");
+    const signed_xdr = s_transaction.sign(sourceKeypair);
     
-    let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
+//    let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
 
-    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+/*    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
     s_transaction.addSignature(public_key, newsig);
     
     server.sendTransaction(s_transaction).then(result => {
@@ -152,7 +160,7 @@
     });
     
     
-    bridge.closeConnections();
+    bridge.closeConnections();*/
 
   }
 

@@ -5,7 +5,7 @@ import { Buffer } from 'buffer';
 import { TOKENS, TOKENS_MAP } from "../../TOKENS";
 
 
-const PROXY = "e6a71d5cc69710aa8b9405752210fac3ca734583efaea28631ae20d6aa14a0d6";
+const PROXY = "f4f568f344a139c919faef4243c42c635312a16eb2d434035782ad7eb899cb20";
 
 function accountIdentifier(account) {
   const buf = Buffer.from(account);
