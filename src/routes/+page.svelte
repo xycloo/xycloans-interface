@@ -1,7 +1,7 @@
 <script>
-  //	import Counter from './Counter.svelte';
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
-  import {get_user_vaults} from "../soroban-helpers";
+  import {get_user_vaults} from "../lender_utils";
+  import {update_rewards} from "../wallet-actions";
   import { TOKENS, TOKENS_MAP } from "./TOKENS";
   import * as SorobanClient from "soroban-client";
   import { xdr, StrKey } from "soroban-client";
@@ -82,64 +82,6 @@
   function set_user_public(pk) {
     document.getElementById("user-pk").innerText = pk;
   }
-
-/*
-  async function get_tot_supply(server, contractId) {
-    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TotSupply")]))
-
-    let resp = server.getContractData(contractId, key).then(data => {
-      let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-      let val = from_xdr.value()._attributes.val.value().value().lo().toString();
-
-      return val
-    });
-
-    return resp
-  }
-
-  async function get_flash_loan(server, tok_id) {
-    const contractId = "e2c37af75db0e7975360b13678f3dd3b733f2341019003b4b3692cd173111423";
-
-    const token_id_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("FlashLoan"), xdr.ScVal.scvObject(xdr.ScObject.scoBytes(Buffer.from(tok_id, 'hex')))]));
-
-    let data = await server.getContractData(contractId, token_id_key);
-
-    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-    let val = from_xdr.value()._attributes.val.value().value().toString("hex");
-
-    return val
-
-  }
-
-
-  async function get_token_id(server, contractId) {
-    const key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("TokenId")]))
-    let data = await server.getContractData(contractId, key)
-    let from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
-
-    return from_xdr.value()._attributes.val.value().value().toString("hex")
-  }
-
-  async function get_bal(server, contractId, tokenId) {
-    const vault_current_yield_key = xdr.ScVal.scvObject(xdr.ScObject.scoVec([xdr.ScVal.scvSymbol("Balance"), xdr.ScVal.scvObject(
-      xdr.ScObject.scoAddress(
-	xdr.ScAddress.scAddressTypeContract(
-	  Buffer.from(contractId, "hex")
-	)
-      )
-    )]));
-
-    
-    let yield_resp = await server.getContractData(tokenId, vault_current_yield_key);
-    let yield_from_xdr = SorobanClient.xdr.LedgerEntryData.fromXDR(yield_resp.xdr, 'base64');
-    let stroops = yield_from_xdr.value()._attributes.val.value().value()[0]._attributes.val.value().value()._attributes.lo.toString();
-
-    //    let amount = stroops.slice(0, stroops.length - 7) + "." + stroops.slice(stroops.length - 7);
-
-    return stroops
-  }
-
-*/
 
   </script>
 

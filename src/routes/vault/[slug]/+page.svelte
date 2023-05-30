@@ -1,16 +1,10 @@
 <script>
   export let data;
-  import {get_contract_bal} from "../../../soroban-helpers";
-  import {get_lender_shares, get_lender_rewards} from "../../../lender_utils";
+   import {get_lender_shares, get_lender_rewards} from "../../../lender_utils";
+  import { update_rewards, deposit, withdraw, collect_rewards } from "../../../wallet-actions";
   import * as SorobanClient from "soroban-client";
-  import {StrKey, xdr} from "soroban-client";
-  import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
-  import { Buffer } from 'buffer';
   import { StellarWalletsKit, WalletNetwork, WalletType } from 'stellar-wallets-kit';
-
   import { onMount } from 'svelte';
-
-  //import * as js_xdr from 'js-xdr'
   import {PUBLIC_TEST_SECRET, PUBLIC_PROXY} from '$env/static/public'
 
 
@@ -28,7 +22,6 @@
 
     try {
       let initial_deposit = await get_lender_shares(server, data.title, lender);
-      console.log(initial_deposit);
       let matured = await get_lender_rewards(server, data.title, lender);
       
       document.getElementById("shares-withdraw-indicator").innerHTML = "<strong>Your shares</strong>:  " + initial_deposit.toString();
@@ -36,370 +29,11 @@
       document.getElementById("deposited").innerHTML = `<strong>Deposited</strong>: ${(initial_deposit / 10000000).toString()} ${data.asset}`;
       document.getElementById("matured").innerHTML = "<strong>Matured rewards</strong>: " + matured.toString() + ` ${data.asset}`;
 
-      //      document.getElementById("total-shares").innerText = "Total shares: " + total_shares.toString() + ` (${Math.round((percentage + Number.EPSILON) * 100) / 100}% of total shares)`;
-      //      document.getElementById("matured-yield").innerText = "Matured yield: " + (total_matured/10000000).toString()  + " " + data.asset;
     } catch (e) {
       document.getElementById("deposited").innerText = "Not a lender for this pool";
-      //      document.getElementById("batches-message").style.display = "block";
-      //      document.getElementById("batches-message").innerText = "Not a lender for this pool";
     }
   });
 
-
-  async function deposit() {
-    const kit = new StellarWalletsKit({
-      network: WalletNetwork.FUTURENET,
-      selectedWallet: WalletType.XBULL
-    });
-
-    const public_key = await kit.getPublicKey();
-
-
-    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
-
-    let { sequence } = await server.getAccount(public_key);
-
-    let str_amount = document.getElementById("amount").value;
-    console.log(xdr);
-    const amount = new xdr.Int128Parts({
-      lo: xdr.Uint64.fromString(str_amount),
-      hi: xdr.Int64.fromString("0"),
-    })
-
-    let account = new SorobanClient.Account(public_key, (sequence).toString());
-    
-    const contract = new SorobanClient.Contract(PUBLIC_PROXY);
-    const fee = 100;
-
-    //    const buf = StrKey.decodeEd25519PublicKey(public)
-
-    const buf = StrKey.decodeEd25519PublicKey(public_key);
-    let params = [
-      xdr.ScVal.scvAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      ),
-      xdr.ScVal.scvAddress(
-        xdr.ScAddress.scAddressTypeContract(
-          Buffer.from(data.token_id, "hex")
-        )
-      ),
-      xdr.ScVal.scvI128(
-	amount
-      )
-    ];
-
-    let transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET,
-      v1: true
-    })
-	.addOperation(contract.call("deposit", ...params))
-	.setTimeout(10000)
-	.build();
-
-    
-    const simulation = await server.simulateTransaction(transaction);
-    const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
-
-    console.log(s_transaction.toXDR());
-    
-    const { signedXDR } = await kit.sign({
-      xdr: s_transaction.toXDR(),
-      public_key,
-    });
-
-    let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
-    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-    s_transaction.addSignature(public_key, newsig);
-
-    server.sendTransaction(s_transaction).then(result => {
-      document.getElementById("tx-id").innerText = "depositing ... tx id is " + result.hash;
-      console.log("id:", result);
-      console.log("error:", result.error);
-    });
-    
-  }
-
-  
-  async function withdraw() {
-    const kit = new StellarWalletsKit({
-      network: WalletNetwork.FUTURENET,
-      selectedWallet: WalletType.XBULL
-    });
-
-    const public_key = await kit.getPublicKey();
-
-
-    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
-
-    let { sequence } = await server.getAccount(public_key);
-    console.log(sequence);
-
-    let str_amount = document.getElementById("withdraw-amount").value;
-    const amount = new xdr.Int128Parts({
-      lo: xdr.Uint64.fromString(str_amount),
-      hi: xdr.Int64.fromString("0"),
-    })
-
-    let account = new SorobanClient.Account(public_key, sequence.toString());
-    
-    const contract = new SorobanClient.Contract(PUBLIC_PROXY);
-    const fee = 100;
-
-    const buf = StrKey.decodeEd25519PublicKey(public_key);
-    let params = [
-      xdr.ScVal.scvAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      ),
-      xdr.ScVal.scvAddress(
-        xdr.ScAddress.scAddressTypeContract(
-          Buffer.from(data.token_id, "hex")
-        )
-      ),
-      xdr.ScVal.scvI128(
-	amount
-      )
-    ];
-
-    console.log(PUBLIC_TEST_SECRET);
-    console.log(public_key);
-    
-    let transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(contract.call("withdraw_liquidity", ...params))
-	.setTimeout(10000)
-	.build();
-
-    const simulation = await server.simulateTransaction(transaction);
-    const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
-
-    const { signedXDR } = await kit.sign({
-      xdr: s_transaction.toXDR(),
-      public_key,
-    });
-
-    let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
-    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-    s_transaction.addSignature(public_key, newsig);
-    
-    server.sendTransaction(s_transaction).then(result => {
-
-      document.getElementById("tx-id").innerText = "withdrawing liquidity position ... tx id is " + result.hash;
-      
-      console.log("id:", result);
-      console.log("error:", result.error);
-    });
-  }
-
-  async function update_rewards() {
-    const kit = new StellarWalletsKit({
-      network: WalletNetwork.FUTURENET,
-      selectedWallet: WalletType.XBULL
-    });
-
-    const public_key = await kit.getPublicKey();
-
-    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
-
-    let { sequence } = await server.getAccount(public_key);
-
-    let account = new SorobanClient.Account(public_key, (sequence).toString());
-    
-    const contract = new SorobanClient.Contract(data.title);
-    const fee = 100;
-
-    const buf = StrKey.decodeEd25519PublicKey(public_key);
-    let params = [
-      xdr.ScVal.scvAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      ),
-    ];
-    
-    let transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(contract.call("update_fee_rewards", ...params))
-	.setTimeout(10000)
-	.build();
-
-    const simulation = await server.simulateTransaction(transaction);
-
-    console.log(simulation);
-    
-    if (simulation.error != null) {
-      	document.getElementById("tx-id").innerText = "error processing update rewards request.";
-    } else {
-      
-      const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
-
-      const { signedXDR } = await kit.sign({
-	xdr: s_transaction.toXDR(),
-	public_key,
-      });
-
-      let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
-      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-      s_transaction.addSignature(public_key, newsig);
-      
-      server.sendTransaction(s_transaction).then(result => {
-
-	document.getElementById("tx-id").innerText = "updating rewards ... tx id is " + result.hash;
-	
-	console.log("id:", result);
-	console.log("error:", result.error);
-      });
-    }
-
-  }
-  
-
-  /*  async function update_rewards() {
-
-      const bridge = new xBullWalletConnect();
-      const public_key = await bridge.connect();
-
-      let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
-
-      let { sequence } = await server.getAccount(public_key);
-      let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
-
-      const contract = new SorobanClient.Contract(data.title);
-      const fee = 100;
-
-      //    const buf = StrKey.decodeEd25519PublicKey(public)
-
-      const buf = StrKey.decodeEd25519PublicKey(public_key);
-      let params = [
-      xdr.ScVal.scvAddress(
-      xdr.ScAddress.scAddressTypeAccount(
-      xdr.PublicKey.publicKeyTypeEd25519(buf)
-      )
-      ),
-      ];
-      
-      let transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-      })
-      .addOperation(contract.call("update_fee_rewards", ...params))
-      .setTimeout(10000)
-      .build();
-
-      const sim = await server.simulateTransaction(transaction);
-
-      console.log(sim);
-      
-      let footprint = sim.results[0].footprint;
-      
-      let s_transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-      })
-      .addOperation(SorobanClient.Operation.invokeHostFunction({
-      function: transaction.operations[0].function,
-      footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
-      auth: []
-      }))
-      .setTimeout(10000)
-      .build();
-
-      const signed_xdr = await bridge.sign({
-      xdr: s_transaction.toXDR(),
-      publicKey: public_key,
-      network: "Test SDF Future Network ; October 2022",
-      });
-      
-      let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
-
-      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-      s_transaction.addSignature(public_key, newsig);
-      
-      server.sendTransaction(s_transaction).then(result => {
-
-      document.getElementById("tx-id").innerText = "updating rewards ... tx id is " + result.id;
-      
-      console.log("id:", result);
-      console.log("error:", result.error);
-      });
-      
-      
-      bridge.closeConnections();
-
-      }*/
-
-  async function collect_rewards() {
-    const kit = new StellarWalletsKit({
-      network: WalletNetwork.FUTURENET,
-      selectedWallet: WalletType.XBULL
-    });
-
-    const public_key = await kit.getPublicKey();
-
-    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
-
-    let { sequence } = await server.getAccount(public_key);
-
-    let account = new SorobanClient.Account(public_key, (sequence).toString());
-    
-    const contract = new SorobanClient.Contract(data.title);
-    const fee = 100;
-
-    const buf = StrKey.decodeEd25519PublicKey(public_key);
-    let params = [
-      xdr.ScVal.scvAddress(
-	xdr.ScAddress.scAddressTypeAccount(
-	  xdr.PublicKey.publicKeyTypeEd25519(buf)
-	)
-      ),
-    ];
-    
-    let transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(contract.call("withdraw_matured", ...params))
-	.setTimeout(10000)
-	.build();
-
-    const simulation = await server.simulateTransaction(transaction);
-
-    console.log(simulation);
-    
-    if (simulation.error != null) {
-      document.getElementById("tx-id").innerText = "No fees to collect";
-    } else {
-      
-      const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
-
-      const { signedXDR } = await kit.sign({
-	xdr: s_transaction.toXDR(),
-	public_key,
-      });
-
-      let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
-      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-      s_transaction.addSignature(public_key, newsig);
-      
-      server.sendTransaction(s_transaction).then(result => {
-
-	document.getElementById("tx-id").innerText = "collecting rewards ... tx id is " + result.hash;
-	
-	console.log("id:", result);
-	console.log("error:", result.error);
-      });
-    }
-
-  }
-  
 </script>
 
 <svelte:head>
@@ -474,12 +108,12 @@
 
 	    <div class="card-el" id="card-el-3">
 	      <input id="amount" placeholder="0" type="number">
-	      <button on:click={deposit}>Deposit</button>
+	      <button on:click={() => deposit(data.token_id)}>Deposit</button>
 	    </div>
 	    <div class="card-el" id="card-el-4">
 	      <input id="withdraw-amount" placeholder="0" type="number">
 	      <p id="shares-withdraw-indicator"></p>
-	      <button on:click={withdraw}>Withdraw</button>
+	      <button on:click={() => withdraw(data.token_id)}>Withdraw</button>
 	    </div>
 
 	  </div>
@@ -493,7 +127,7 @@
 	  <div class="flex" style="width: 300px; position: relative; margin-left: 20px">
 	    <button class="action-btn" id="update-rewards" on:click={() => update_rewards(data.title)}>Update rewards</button>
 	    <div style="width: 40px;"></div>
-	    <button class="action-btn" id="update-rewards" on:click={collect_rewards}>Collect rewards</button>
+	    <button class="action-btn" id="update-rewards" on:click={() => collect_rewards(data.title)}>Collect rewards</button>
 	  </div>
 	</div>
       </div> 

@@ -3,9 +3,8 @@ import { Server } from "soroban-client";
 import { xdr, StrKey } from "soroban-client";
 import { Buffer } from 'buffer';
 import { TOKENS, TOKENS_MAP } from "../../TOKENS";
+import {PUBLIC_PROXY} from '$env/static/public'
 
-
-const PROXY = "f4f568f344a139c919faef4243c42c635312a16eb2d434035782ad7eb899cb20";
 
 function accountIdentifier(account) {
   const buf = Buffer.from(account);
@@ -63,7 +62,7 @@ async function get_flash_loan(server, tok_id) {
           )
     ]);
 
-  let data = await server.getContractData(PROXY, token_id_key);
+  let data = await server.getContractData(PUBLIC_PROXY, token_id_key);
 
   let from_xdr = xdr.LedgerEntryData.fromXDR(data.xdr, 'base64');
   let val = from_xdr.value()._attributes.val.value().value().toString("hex");
@@ -85,34 +84,22 @@ async function get_bal(server, contractId, tokenId) {
   let amount;
   try {
     let yield_resp = await server.getContractData(tokenId, vault_current_yield_key);
-
     let yield_from_xdr = xdr.LedgerEntryData.fromXDR(yield_resp.xdr, 'base64');
-    console.log(yield_from_xdr);
-    
     let stroops = yield_from_xdr.value()._attributes.val.value()[0]._attributes.val.value()._attributes.lo.toString();
     amount = parseInt(stroops);
-
-    
   } catch (e) {
     amount = 0
   }
-  
+
   return amount
 }
 
 export async function load({ params }) {
   let server = new Server("https://rpc-futurenet.stellar.org/")
   const contractId = params.slug;
-
   let token_id_resp = await get_token_id(server, contractId);
-  console.log(token_id_resp);
   let totsupp_resp = await get_tot_supply(server, contractId);
-  console.log(totsupp_resp);
   let current_yield = await get_bal(server, contractId, token_id_resp);
-  console.log(current_yield)
-
-  console.log(current_yield);
-
   let flash_loan = await get_flash_loan(server, token_id_resp);
   let total_liquidity = await get_bal(server, flash_loan, token_id_resp);
 

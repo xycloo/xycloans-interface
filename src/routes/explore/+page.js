@@ -3,7 +3,7 @@ import * as SorobanClient from "soroban-client";
 import {xdr} from "soroban-client";
 import { Buffer } from 'buffer';
 import { TOKENS, TOKENS_MAP } from "../TOKENS";
-import {load_vaults} from "../../soroban-helpers";
+import {load_vaults} from "../../lender_utils";
 
 
 export async function load({ params }) {

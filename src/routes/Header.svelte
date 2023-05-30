@@ -2,7 +2,8 @@
   import { page } from '$app/stores';
   import logo from '$lib/images/logo.png';
   import github from '$lib/images/github.svg';
-  import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
+  //  import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
+  import { StellarWalletsKit, WalletNetwork, WalletType } from 'stellar-wallets-kit';
   import { onMount } from 'svelte';
 
   onMount(() => {
@@ -14,10 +15,13 @@
   
   async function connect_wallet() {
     if (window.localStorage.getItem("xycloans-public") == null) {
-      const bridge = new xBullWalletConnect();
-      const public_key = await bridge.connect();
+      const kit = new StellarWalletsKit({
+	network: WalletNetwork.FUTURENET,
+	selectedWallet: WalletType.XBULL
+      });
+
+      const public_key = await kit.getPublicKey();
       window.localStorage.setItem("xycloans-public", public_key);
-      bridge.closeConnections();
       window.location.reload()
     }
   }

@@ -1,8 +1,9 @@
 import * as SorobanClient from "soroban-client";
 import { xdr, StrKey } from "soroban-client";
 import { Buffer } from 'buffer';
-import {get_lender_shares, update_rewards, get_lender_rewards} from "./lender_utils";
+import {get_lender_shares, get_lender_rewards} from "./lender_utils";
 import { TOKENS, TOKENS_MAP } from "./routes/TOKENS";
+import {PUBLIC_PROXY} from '$env/static/public'
 
 
 export async function get_contract_bal(server, contractId, tokenId) {
@@ -37,7 +38,7 @@ export async function get_user_vaults(server, lender) {
 }
 
 export async function load_vaults(server) {
-  const contractId = "f4f568f344a139c919faef4243c42c635312a16eb2d434035782ad7eb899cb20";
+  const contractId = PUBLIC_PROXY;
   let vaults = [];
 
   for (let tok_id of TOKENS) {
