@@ -47,9 +47,6 @@
 
 
   async function deposit() {
-
-//    const bridge = new xBullWalletConnect();
-    //    const public_key = await bridge.connect();
     const kit = new StellarWalletsKit({
       network: WalletNetwork.FUTURENET,
       selectedWallet: WalletType.XBULL
@@ -61,9 +58,7 @@
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
-    sequence = parseInt(sequence) + 1;
 
-    //    var big = js_xdr.Hyper.fromString('1099511627776');
     let str_amount = document.getElementById("amount").value;
     console.log(xdr);
     const amount = new xdr.Int128Parts({
@@ -71,7 +66,7 @@
       hi: xdr.Int64.fromString("0"),
     })
 
-    let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
+    let account = new SorobanClient.Account(public_key, (sequence).toString());
     
     const contract = new SorobanClient.Contract(PUBLIC_PROXY);
     const fee = 100;
@@ -119,22 +114,6 @@
     let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
     s_transaction.addSignature(public_key, newsig);
 
-/*
-
-TODO: uncomment for when wallets are updated for Preview 9
-
-    const signed_xdr = await bridge.sign({
-      xdr: s_transaction.toXDR(),
-      publicKey: public_key,
-      network: "Test SDF Future Network ; October 2022",
-    });
-
-    console.log(signed_xdr);
-*/
-    
-//    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
- //   s_transaction.sign(sourceKeypair);
-    
     server.sendTransaction(s_transaction).then(result => {
       document.getElementById("tx-id").innerText = "depositing ... tx id is " + result.hash;
       console.log("id:", result);
@@ -156,7 +135,6 @@ TODO: uncomment for when wallets are updated for Preview 9
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
-//    sequence = parseInt(sequence);
     console.log(sequence);
 
     let str_amount = document.getElementById("withdraw-amount").value;
@@ -200,22 +178,6 @@ TODO: uncomment for when wallets are updated for Preview 9
 
     const simulation = await server.simulateTransaction(transaction);
     const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
-
-    /*
-      TODO: uncomment when wallets are update to preview 9
-
-    const signed_xdr = await bridge.sign({
-      xdr: s_transaction.toXDR(),
-      publicKey: public_key,
-      network: "Test SDF Future Network ; October 2022",
-    });
-    
-    let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
-
-    */
-
-//    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
-    //    s_transaction.sign(sourceKeypair);
 
     const { signedXDR } = await kit.sign({
       xdr: s_transaction.toXDR(),
@@ -311,15 +273,18 @@ TODO: uncomment for when wallets are updated for Preview 9
       }*/
 
   async function collect_rewards() {
+    const kit = new StellarWalletsKit({
+      network: WalletNetwork.FUTURENET,
+      selectedWallet: WalletType.XBULL
+    });
 
-    const bridge = new xBullWalletConnect();
-    const public_key = await bridge.connect();
+    const public_key = await kit.getPublicKey();
 
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
     let { sequence } = await server.getAccount(public_key);
 
-    let account = new SorobanClient.Account(public_key, (sequence - 1).toString());
+    let account = new SorobanClient.Account(public_key, (sequence).toString());
     
     const contract = new SorobanClient.Contract(data.title);
     const fee = 100;
@@ -341,50 +306,36 @@ TODO: uncomment for when wallets are updated for Preview 9
 	.setTimeout(10000)
 	.build();
 
-    const sim = await server.simulateTransaction(transaction);
+    const simulation = await server.simulateTransaction(transaction);
 
-    console.log(sim);
-    
-    let auth = sim.results[0].auth;
-    let footprint = sim.results[0].footprint;
-    
-    let s_transaction = new SorobanClient.TransactionBuilder(account, {
-      fee,
-      networkPassphrase: SorobanClient.Networks.FUTURENET
-    })
-	.addOperation(SorobanClient.Operation.invokeHostFunction({
-          function: transaction.operations[0].function,
-          footprint: xdr.LedgerFootprint.fromXDR(footprint, "base64"),
-          auth: [xdr.ContractAuth.fromXDR(auth[0], "base64")]
-        }))
-	.setTimeout(10000)
-	.build();
-
-    const signed_xdr = await bridge.sign({
-      xdr: s_transaction.toXDR(),
-      publicKey: public_key,
-      network: "Test SDF Future Network ; October 2022",
-    });
-    
-    let signed_tx = xdr.TransactionEnvelope.fromXDR(signed_xdr, "base64");
-
-    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
-    s_transaction.addSignature(public_key, newsig);
-    
-    server.sendTransaction(s_transaction).then(result => {
-
-      document.getElementById("tx-id").innerText = "withdrawing fees ... tx id is " + result.hash;
+    if (simulation.error.startsWith(`HostError
+Value: Status(ContractError(3))`)) {
+      document.getElementById("tx-id").innerText = "No fees to collect";
+    } else {
       
-      console.log("id:", result);
-      console.log("error:", result.error);
-    });
-    
-    
-    bridge.closeConnections();
+      const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
+
+      const { signedXDR } = await kit.sign({
+	xdr: s_transaction.toXDR(),
+	public_key,
+      });
+
+      let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
+      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+      s_transaction.addSignature(public_key, newsig);
+      
+      server.sendTransaction(s_transaction).then(result => {
+
+	document.getElementById("tx-id").innerText = "collecting rewards ... tx id is " + result.hash;
+	
+	console.log("id:", result);
+	console.log("error:", result.error);
+      });
+    }
 
   }
   
-</script>
+  </script>
 
 <svelte:head>
   <title>Xycloans</title>
