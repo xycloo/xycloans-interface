@@ -1,7 +1,7 @@
 <script>
   export let data;
   import {get_contract_bal} from "../../../soroban-helpers";
-  import {get_lender_shares, get_lender_rewards, update_rewards} from "../../../lender_utils";
+  import {get_lender_shares, get_lender_rewards} from "../../../lender_utils";
   import * as SorobanClient from "soroban-client";
   import {StrKey, xdr} from "soroban-client";
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
@@ -80,11 +80,11 @@
 	  xdr.PublicKey.publicKeyTypeEd25519(buf)
 	)
       ),
-       xdr.ScVal.scvAddress(
-            xdr.ScAddress.scAddressTypeContract(
-              Buffer.from(data.token_id, "hex")
-            )
-          ),
+      xdr.ScVal.scvAddress(
+        xdr.ScAddress.scAddressTypeContract(
+          Buffer.from(data.token_id, "hex")
+        )
+      ),
       xdr.ScVal.scvI128(
 	amount
       )
@@ -119,7 +119,7 @@
       console.log("id:", result);
       console.log("error:", result.error);
     });
-        
+    
   }
 
   
@@ -197,6 +197,70 @@
     });
   }
 
+  async function update_rewards() {
+    const kit = new StellarWalletsKit({
+      network: WalletNetwork.FUTURENET,
+      selectedWallet: WalletType.XBULL
+    });
+
+    const public_key = await kit.getPublicKey();
+
+    let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
+
+    let { sequence } = await server.getAccount(public_key);
+
+    let account = new SorobanClient.Account(public_key, (sequence).toString());
+    
+    const contract = new SorobanClient.Contract(data.title);
+    const fee = 100;
+
+    const buf = StrKey.decodeEd25519PublicKey(public_key);
+    let params = [
+      xdr.ScVal.scvAddress(
+	xdr.ScAddress.scAddressTypeAccount(
+	  xdr.PublicKey.publicKeyTypeEd25519(buf)
+	)
+      ),
+    ];
+    
+    let transaction = new SorobanClient.TransactionBuilder(account, {
+      fee,
+      networkPassphrase: SorobanClient.Networks.FUTURENET
+    })
+	.addOperation(contract.call("update_fee_rewards", ...params))
+	.setTimeout(10000)
+	.build();
+
+    const simulation = await server.simulateTransaction(transaction);
+
+    console.log(simulation);
+    
+    if (simulation.error != null) {
+      	document.getElementById("tx-id").innerText = "error processing update rewards request.";
+    } else {
+      
+      const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
+
+      const { signedXDR } = await kit.sign({
+	xdr: s_transaction.toXDR(),
+	public_key,
+      });
+
+      let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
+      let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+      s_transaction.addSignature(public_key, newsig);
+      
+      server.sendTransaction(s_transaction).then(result => {
+
+	document.getElementById("tx-id").innerText = "updating rewards ... tx id is " + result.hash;
+	
+	console.log("id:", result);
+	console.log("error:", result.error);
+      });
+    }
+
+  }
+  
 
   /*  async function update_rewards() {
 
@@ -308,8 +372,9 @@
 
     const simulation = await server.simulateTransaction(transaction);
 
-    if (simulation.error.startsWith(`HostError
-Value: Status(ContractError(3))`)) {
+    console.log(simulation);
+    
+    if (simulation.error != null) {
       document.getElementById("tx-id").innerText = "No fees to collect";
     } else {
       
@@ -335,7 +400,7 @@ Value: Status(ContractError(3))`)) {
 
   }
   
-  </script>
+</script>
 
 <svelte:head>
   <title>Xycloans</title>
@@ -376,7 +441,7 @@ Value: Status(ContractError(3))`)) {
 	    <p><strong>Total supply</strong>: {data.shares_total_supply}</p>
 	    <p><strong>Liquidity</strong>: {data.total_liquidity} {data.asset}</p>
 	    <p><strong>Current yield</strong>: {data.current_yield} {data.asset}</p>
-	   
+	    
 	  </div>
 	  <div class="card-el" id="card-el-2">
 	    <p id="shares"></p>
@@ -590,7 +655,7 @@ Value: Status(ContractError(3))`)) {
     box-shadow: 0px 0px 0px #fff inset;
   }
 
- 
+  
   #update-rewards {
     margin-top: 20px;
     width: 100%;
