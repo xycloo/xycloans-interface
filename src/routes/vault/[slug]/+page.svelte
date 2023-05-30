@@ -6,6 +6,7 @@
   import {StrKey, xdr} from "soroban-client";
   import {xBullWalletConnect}  from '@creit-tech/xbull-wallet-connect';
   import { Buffer } from 'buffer';
+  import { StellarWalletsKit, WalletNetwork, WalletType } from 'stellar-wallets-kit';
 
   import { onMount } from 'svelte';
 
@@ -47,8 +48,15 @@
 
   async function deposit() {
 
-    const bridge = new xBullWalletConnect();
-    const public_key = await bridge.connect();
+//    const bridge = new xBullWalletConnect();
+    //    const public_key = await bridge.connect();
+    const kit = new StellarWalletsKit({
+      network: WalletNetwork.FUTURENET,
+      selectedWallet: WalletType.XBULL
+    });
+
+    const public_key = await kit.getPublicKey();
+
 
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
@@ -100,6 +108,17 @@
     const simulation = await server.simulateTransaction(transaction);
     const s_transaction = SorobanClient.assembleTransaction(transaction, SorobanClient.Networks.FUTURENET, simulation);
 
+    console.log(s_transaction.toXDR());
+    
+    const { signedXDR } = await kit.sign({
+      xdr: s_transaction.toXDR(),
+      public_key,
+    });
+
+    let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
+    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+    s_transaction.addSignature(public_key, newsig);
+
 /*
 
 TODO: uncomment for when wallets are updated for Preview 9
@@ -113,8 +132,8 @@ TODO: uncomment for when wallets are updated for Preview 9
     console.log(signed_xdr);
 */
     
-    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
-    s_transaction.sign(sourceKeypair);
+//    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
+ //   s_transaction.sign(sourceKeypair);
     
     server.sendTransaction(s_transaction).then(result => {
       document.getElementById("tx-id").innerText = "depositing ... tx id is " + result.hash;
@@ -122,13 +141,17 @@ TODO: uncomment for when wallets are updated for Preview 9
       console.log("error:", result.error);
     });
         
-    bridge.closeConnections();
   }
 
   
   async function withdraw() {
-    const bridge = new xBullWalletConnect();
-    const public_key = await bridge.connect();
+    const kit = new StellarWalletsKit({
+      network: WalletNetwork.FUTURENET,
+      selectedWallet: WalletType.XBULL
+    });
+
+    const public_key = await kit.getPublicKey();
+
 
     let server = new SorobanClient.Server("https://rpc-futurenet.stellar.org/");
 
@@ -191,9 +214,18 @@ TODO: uncomment for when wallets are updated for Preview 9
 
     */
 
-    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
-    s_transaction.sign(sourceKeypair);
-   
+//    const sourceKeypair = SorobanClient.Keypair.fromSecret(PUBLIC_TEST_SECRET);
+    //    s_transaction.sign(sourceKeypair);
+
+    const { signedXDR } = await kit.sign({
+      xdr: s_transaction.toXDR(),
+      public_key,
+    });
+
+    let signed_tx = xdr.TransactionEnvelope.fromXDR(signedXDR, "base64");
+    let newsig = Buffer.from(signed_tx._value._attributes.signatures[0]._attributes.signature).toString("base64");
+    s_transaction.addSignature(public_key, newsig);
+    
     server.sendTransaction(s_transaction).then(result => {
 
       document.getElementById("tx-id").innerText = "withdrawing liquidity position ... tx id is " + result.hash;
@@ -201,10 +233,6 @@ TODO: uncomment for when wallets are updated for Preview 9
       console.log("id:", result);
       console.log("error:", result.error);
     });
-    
-    
-    bridge.closeConnections();
-
   }
 
 
