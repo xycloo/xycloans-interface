@@ -42,8 +42,11 @@
       <li aria-current={$page.url.pathname === '/' ? 'page' : undefined}>
 	<a href="/">Dashboard</a>
       </li>
-      <li aria-current={$page.url.pathname === '/about' ? 'page' : undefined}>
+      <li aria-current={$page.url.pathname === '/explore' ? 'page' : undefined}>
 	<a href="/explore">Explore</a>
+      </li>
+      <li aria-current={$page.url.pathname === 'https://xycloans.xycloo.com/' ? 'page' : undefined}>
+	<a href="https://xycloans.xycloo.com">docs</a>
       </li>
 
 

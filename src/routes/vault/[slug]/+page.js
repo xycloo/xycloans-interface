@@ -107,10 +107,10 @@ export async function load({ params }) {
     title: contractId,
     token_id: token_id_resp,
     shares_total_supply: totsupp_resp,
-    current_yield: current_yield,
+    current_yield: current_yield / 1e7,
     asset: TOKENS_MAP[token_id_resp],
     flash_loan: flash_loan,
-    total_liquidity: total_liquidity,
+    total_liquidity: total_liquidity / 1e7,
   }
   
   throw error(404, 'Not found');

@@ -19,11 +19,13 @@ export async function deposit(tokenIdAddress) {
 
   let { sequence } = await server.getAccount(public_key);
 
-  let str_amount = document.getElementById("amount").value;
-
+  let str_amount = document.getElementById("amount").value; // not in stroops
+  let stroops = BigInt(parseInt(str_amount) * 1e7);
+  
+  
   const amount = new xdr.Int128Parts({
-    lo: xdr.Uint64.fromString(str_amount),
-    hi: xdr.Int64.fromString("0"),
+    lo: xdr.Uint64.fromString((Number(stroops & BigInt(0xFFFFFFFFFFFFFFFFn))).toString()),
+    hi: xdr.Int64.fromString((Number((stroops >> BigInt(64)) & BigInt(0xFFFFFFFFFFFFFFFFn))).toString()),
   })
 
   let account = new SorobanClient.Account(public_key, (sequence).toString());
