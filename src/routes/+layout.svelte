@@ -1,7 +1,12 @@
 <script>
-	import Header from './Header.svelte';
-	import './styles.css';
+  import Header from './Header.svelte';
+  import './styles.css';
+  import favicon from '$lib/images/favicon.png';
 </script>
+
+<svelte:head>
+  <link rel="icon" type="image/png" href={favicon} />
+</svelte:head>
 
 <div class="app">
 	<Header />
